@@ -6,7 +6,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     21.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: SolverConstructor.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -84,7 +84,15 @@ public class SolverConstructor
     else if (qName.equals("roles"))
       role = -1;
     else if (qName.equals("role"))
-      solver.getRoles().setName(++role, getString(attributes, "name", role));
+    {
+      Roles roles = solver.getRoles();
+      roles.setName(++role, getString(attributes, "name", role));
+      int minmax = solver.getPersons().getNumber()
+      				/	solver.getSessionNumber()
+      				/ solver.getRoles().getNumber();
+      roles.setMinimumPerSession(role, getInt(attributes, "min", minmax));
+      roles.setMaximumPerSession(role, getInt(attributes, "max", minmax));
+    }
     else if (qName.equals("preferredTopic"))
       solver.getPersons().setPreference(person, ++topic, getInt(attributes, "index", 0));
     else if (qName.equals("solutionParameters"))

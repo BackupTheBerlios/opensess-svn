@@ -17,7 +17,7 @@ all: checkUsage sourceTarget winTarget siteTarget
 sourceTarget: 
 	@echo "Creating $(SOURCE_TARGET)..."
 	@rm -f $(SOURCE_TARGET)
-	@zip $(SOURCE_TARGET) README-SOURCE LICENSE RELEASE BUILD openSess/*.java help/*
+	@zip $(SOURCE_TARGET) README-SOURCE LICENSE COPYING RELEASE BUILD openSess/*.java help/*
 
 winTarget: exeFiles
 	@echo "Creating $(WIN_TARGET)..."
@@ -25,7 +25,7 @@ winTarget: exeFiles
 	@mv -f using_javaw.exe OpenSess.exe
 	@mv -f using_java.exe OpenSessConsole.exe
 	@rm -f $(WIN_TARGET)
-	@zip $(WIN_TARGET) README-WIN LICENSE RELEASE INSTALL openSess/*.class help/* OpenSess.exe OpenSessConsole.exe
+	@zip $(WIN_TARGET) README-WIN LICENSE RELEASE COPYING INSTALL openSess/*.class help/* OpenSess.exe OpenSessConsole.exe
 
 siteTarget: 
 	@echo "Creating $(SITE_TARGET)..."

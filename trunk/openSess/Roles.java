@@ -7,7 +7,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11
- * Revision ID: $Id$
+ * Revision ID: $Id: Roles.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * 2005-02-17/AW: Complete rewrite for GUI.
  * 
@@ -50,7 +50,8 @@ public class Roles
   implements XMLStateSaving
 {
   private DefaultListModel names;
-
+  private int              minPerSession[], maxPerSession[];
+  
   /**
    * Constructs a new Roles object from information in the Solver object.
    * 
@@ -59,10 +60,19 @@ public class Roles
   public Roles(Solver solver)
   {
     names = new DefaultListModel();
-
-    for (int role = 0;  role < solver.dimRoles;  ++role)
+    int dimRoles = solver.dimRoles;
+    minPerSession = new int[dimRoles];
+    maxPerSession = new int[dimRoles];
+    
+    for (int role = 0;  role < dimRoles;  ++role)
+    {
       names.addElement("Role " + (role+1));
-  
+      minPerSession[role] = solver.getPersons().getNumber() 
+      											/ solver.getSessionNumber()
+                            / dimRoles;
+      maxPerSession[role] = minPerSession[role];
+    }
+    
     if (getNumber() > 0)
       setName(0, "Speaker");
     
@@ -137,6 +147,54 @@ public class Roles
   }
   
   /**
+   * Return the minimum occurence of the specified role per session.
+   * NOTE: The first role has index 0.
+   * 
+   * @param index the index of a role.
+   * @return the minimum occurences of this role per session.
+   */
+  public int getMinimumPerSession(int index)
+  {
+    return minPerSession[index];
+  }
+  
+  /**
+   * Return the maximum occurence of the specified role per session.
+   * NOTE: The first role has index 0.
+   * 
+   * @param index the index of a role.
+   * @return the maximum occurences of this role per session.
+   */
+  public int getMaximumPerSession(int index)
+  {
+    return maxPerSession[index];
+  }
+  
+  /**
+   * Set the minimum occurence of the specified role per session.
+   * NOTE: The first role has index 0.
+   * 
+   * @param index the index of a role.
+   * @param min the minimum occurence.
+   */
+  public void setMinimumPerSession(int index, int min)
+  {
+    minPerSession[index] = min;
+  }
+  
+  /**
+   * Set the maximum occurence of the specified role per session.
+   * NOTE: The first role has index 0.
+   * 
+   * @param index the index of a role.
+   * @param max the maximum occurence.
+   */
+  public void setMaximumPerSession(int index, int max)
+  {
+    maxPerSession[index] = max;
+  }
+  
+  /**
    * Produce an XML representation of the roles.
    */
   public void save(PrintWriter stream, int level)
@@ -144,7 +202,9 @@ public class Roles
     Indenter.println(stream, level, "<roles>");
 
     for (int r = 0;  r < getNumber();  ++r)
-      Indenter.println(stream, level+1, "<role name=\"" + getName(r) + "\"/>");
+      Indenter.println(stream, level+1, "<role name=\"" + getName(r) 
+                       + "\" min=\"" + getMinimumPerSession(r)
+                       + "\" max=\"" + getMaximumPerSession(r) + "\"/>");
     
     Indenter.println(stream, level, "</roles>");
   }

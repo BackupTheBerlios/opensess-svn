@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.text.ParseException;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -13,6 +14,7 @@ import javax.swing.ComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -23,7 +25,7 @@ import javax.swing.JTextField;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     16.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: ListEditWindow.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -100,12 +102,12 @@ public class ListEditWindow
     editPanel.add(new JLabel("Name:"));
     editPanel.add(Box.createRigidArea(new Dimension(10, 0)));
     nameField = new JTextField();
-    nameField.setActionCommand("set");
     nameField.addActionListener(this); // react to VK_ENTER
     nameField.addFocusListener(this);  // react to FocusLost
     editPanel.add(nameField);
     
     addAdditionalComponents(rootPanel);
+    rootPanel.add(Box.createRigidArea(new Dimension(0, 10)));
     
     JPanel buttonPanel = new JPanel();
     buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.LINE_AXIS));
@@ -230,9 +232,6 @@ public class ListEditWindow
           redisplay();
         }
       }
-      else if (command.equals("set"))
-      {
-      }
       else if (command.equals("close"))
       {
         setVisible(false);
@@ -256,9 +255,22 @@ public class ListEditWindow
    */
   public void focusLost(FocusEvent e)
   {
-    setObjectName(false);
+    if (e.getSource() == nameField)
+      setObjectName(false);
+    
+    additionalFocusLost(e);
   }
 
+  /**
+   * Derived classes can override this method if they need
+   * control over focus changes.
+   * 
+   * @param e the FocusEvent.
+   */
+  protected void additionalFocusLost(FocusEvent e)
+  {
+  }
+  
   /**
    * Set the name of the currently selected object to the value of
    * the text field. If the parameter is true, try to advance the
@@ -360,5 +372,24 @@ public class ListEditWindow
         return index;
       
     return -1;
+  }
+  
+  /**
+   * Get the value of a JFormattedField as an int.
+   * 
+   * @param field the field.
+   * @return the value, converted to int.
+   */
+  protected int getIntFromField(JFormattedTextField field)
+  {
+    try
+    {
+      field.commitEdit();
+    }
+    catch (ParseException ex)
+    {
+    }
+    
+    return ((Integer)field.getValue()).intValue();
   }
 }
