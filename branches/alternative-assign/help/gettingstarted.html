@@ -1,0 +1,105 @@
+<html>
+  <body>
+    <h1>Getting started</h1>
+    
+    <p>OpenSess starts with an initial configuration for 12 participants,
+      12 topics, 3 roles and 2 parallel sessions. If this is not what you
+      need, you should use "File/New" first to enter a new configuration.
+      When you press "Create" in the configuration window, the MainWindow
+      will be reconfigured (provided that your configuration numbers
+      do not violate any of the divisibilty rules).
+    </p>
+
+    <p>Although the names of participants, topics and roles do not influence
+      the solution calculation at all, it is a good idea to enter the
+      names first because it helps you to enter the topic preferences,
+      which <em>do</em> influence the calculation. Entering the names is
+      very similar for participants, topics, and roles: Just press the
+      "Edit" button under the relevant list which opens a new window which
+      shows an editable version of the name selected in the main window.
+      Double-clicking on a name in the main window has the same effect.
+      You can change the name to anything you like. As soon as you click
+      anywhere outside the text entry field, the name will be updated
+      wherever it is visible in OpenSess. If instead, you press the
+      enter key, the name will be updated <em>and</em> the next name in 
+      the list will be selected in the edit window. This way, you can 
+      change all the names in the list very quickly by alternately
+      entering names and pressing the enter key.
+      You can also navigate to another name in the list either by selecting it
+      from the drop-down list at the top of the edit window or by 
+      using the "Next" and "Previous" buttons.
+    </p>
+
+    <p>The window for editing participant data is a little different from
+      the other edit windows sinsce it also contains the list of preferences
+      for the selected participant. In this list, every topic appears
+      exactly once. The topic of most interest to the selected participant
+      should be at the top. If it isn't, click on the topic at the top.
+      A drop-down list of all topics appears. Select the topic that
+      <em>should</em> be at the top. The list will now be update to
+      show that topic at the top. The topic that used to be at the top
+      will now appear wherever the most important topic used to be in the
+      list before (which means that the two topics were swapped).
+      In the same way, bring the second-most interesting topic into
+      position two and so forth until the list reflects the interests
+      of the selected person.
+    </p>
+
+    <p>You can have all edit windows open at the same time and switch
+      back and forth between them as you like. When you change the
+      name of a topic for example, it will also be changed in the 
+      main window and the preference list of the participant window.
+    </p>
+
+    <p>You are now ready to calculate some solutions.
+      Check the calculation parameters near the bottom right of the main
+      window, make any neccessary adjustments and press "Solve".
+      The calculation starts in a background thread (which means that
+      you can actually change names whiles a calculation is progressing).
+      If it is a lengthy calculation, a progress window will appear
+      which gives you some feedback of what is going on.
+      Any solution found during the calculation will appear in the
+      solution list. The solutions are given initial names of the form
+      "Solution &lt;n&gt;: &lt;meandev&gt; - &lt;maxdev&gt; - &lt;stddev&gt;"
+      where "n" is the solution number, "meandev" the mean deviation,
+      "maxdev" the maximum deviation and "stddev" the standard deviation.
+      You can use these values to pick a solution that interests you.
+      You can look at any interesting solution in the solution
+      window either
+      by selecting it in the list and pressing the "Show" button or simply
+      by double-clicking the solution in the list.
+    </p>
+
+    <p>The solution window works exactly like the edit windows:
+      you can give other names to the solutions and you can navigate to other
+      solutions using the drop-down list or the "Next" and "Previous" buttons.
+      Otherwise the window gives you three different views on the
+      solution:
+    </p>
+
+    <ul>
+      <li>
+        <p>
+          The "Statistics" panel shows the statistical evaluation of the
+          solution.
+        </p>
+      </li>
+      <li>
+        <p>
+          The "Topic Clustering" panel shows how topics are clustered into
+          parallel sessions by this solution. The session rounds are color
+          coded to give you a reference for the same color coding in the
+          "Role Assignment" panel.
+        </p>
+      </li>
+      <li>
+        <p>The "Role Assignment" panel shows you who should attend which session
+          and what role the participant should have.
+          Topics in the same session round have the same color so that you can
+          easily see what is happening in parallel.
+        </p>
+      </li>
+    </ul>
+  </body>
+</html>
+
