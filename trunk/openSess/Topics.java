@@ -11,7 +11,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id$
+ * Revision ID: $Id: Topics.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -43,23 +43,22 @@ public class Topics
   private int               rank[];
   private int               rankInx[];
   private int               dist[][];
-  private int               dimPersons;
 
   /**
    * Creates a new Topics object with configuration data from a Solver object.
    * 
    * @param solver  a Solver object.
    */
-  public Topics(Solver solver)
+  public Topics(Solver solver, int dimTopics)
   {
     // create topic list
     this.solver = solver;
     names = new DefaultListModel();
 
-    for (int t = 0; t < solver.dimTopics; t++)
+    for (int t = 0; t < dimTopics; t++)
       names.addElement("Topic " + (t+1));
 
-    dist = new int[solver.dimTopics][solver.dimTopics];
+    dist = new int[dimTopics][dimTopics];
   }
 
   /**
@@ -111,30 +110,37 @@ public class Topics
   protected void calcPrefs()
   {
     boolean debug = false;
-    pref = new int[solver.dimTopics];
-    for (int t = 0; t < solver.dimTopics; t++)
+    int dimTopics = getNumber();
+    int dimPersons = solver.getPersons().getNumber();
+    
+    pref = new int[dimTopics];
+    
+    for (int t = 0;  t < dimTopics;  t++)
     {
       pref[t] = 0;
-      for (int p = 0; p < solver.dimPersons; p++)
+      for (int p = 0; p < dimPersons; p++)
       {
-        pref[t] += solver.getPersons().pref[p][t];
+        pref[t] += solver.getPersons().getPreference(p, t);
+        
         if (debug)
           System.out.println("Thema " + getName(t) + " pref+="
-                             + solver.getPersons().pref[p][t]);
+                             + solver.getPersons().getPreference(p, t));
       }
     }
 
     // calculate the total rank of each topic
     // so that we can show topics ordered by rank if desired
-    rank = new int[solver.dimTopics];
-    rankInx = new int[solver.dimTopics];
+    rank = new int[dimTopics];
+    rankInx = new int[dimTopics];
 
     int prefH[] = (int[]) pref.clone();
-    for (int t = 0; t < solver.dimTopics; t++)
+    
+    for (int t = 0; t < dimTopics; t++)
     {
       int min = Integer.MAX_VALUE;
       int tmin = 0;
-      for (int tt = 0; tt < solver.dimTopics; tt++)
+      
+      for (int tt = 0; tt < dimTopics; tt++)
       {
         if (prefH[tt] < min)
         {
@@ -145,6 +151,7 @@ public class Topics
             System.out.println("rank " + tt + ", value " + min);
         }
       }
+      
       rankInx[t] = tmin;
       prefH[tmin] = Integer.MAX_VALUE;
       if (debug)
@@ -162,9 +169,12 @@ public class Topics
    */
   protected void calcDist(Persons persons)
   {
-    for (int t = 0; t < solver.dimTopics; t++)
+    int dimTopics = getNumber();
+    int dimPersons = solver.getPersons().getNumber();
+    
+    for (int t = 0;  t < dimTopics;  t++)
     {
-      for (int tt = 0; tt < solver.dimTopics; tt++)
+      for (int tt = 0;  tt < dimTopics;  tt++)
       {
         if (t == tt)
           dist[t][tt] = 0;
@@ -173,9 +183,9 @@ public class Topics
         else
         {
           int sum = 0, dif;
-          for (int p = 0; p < solver.dimPersons; p++)
+          for (int p = 0;  p < dimPersons;  p++)
           {
-            dif = persons.pref[p][t] - persons.pref[p][tt];
+            dif = persons.getPreference(p, t) - persons.getPreference(p, tt);
             sum += dif * dif;
           }
           dist[tt][t] = dist[t][tt] = sum;
@@ -195,9 +205,10 @@ public class Topics
   protected int hashSum(int vec[])
   {
     int hashVal = 0;
+    int dimTopics = getNumber();
     
     for (int n = 0; n < vec.length; n++)
-      hashVal += (n + 1) * (solver.dimTopics) * (vec[n] + 1) * (vec[n] + 1);
+      hashVal += (n + 1) * dimTopics * (vec[n] + 1) * (vec[n] + 1);
 
     return hashVal;
   }
@@ -239,7 +250,7 @@ public class Topics
     // 0,1,2, ..
 
     // we start with a simple initial grouping
-    int n = solver.dimTopics;
+    int n = getNumber();
     int vec[] = new int[n];
     int bestVec[] = new int[n];
     for (int i = 0; i < n; i++)
@@ -363,21 +374,23 @@ public class Topics
    */
   protected void normalize(int vec[])
   {
+    int dimTopics = getNumber();
     int gr = 0;
-    for (int t = 0; t < solver.dimTopics; t++)
+    
+    for (int t = 0; t < dimTopics; t++)
     {
       if (vec[t] >= 100)
         continue;
       int vOld = vec[t];
       vec[t] = 100 + gr;
-      for (int tt = t + 1; tt < solver.dimTopics; tt++)
+      for (int tt = t + 1; tt < dimTopics; tt++)
       {
         if (vec[tt] == vOld)
           vec[tt] = 100 + gr;
       }
       gr += 1;
     }
-    for (int t = 0; t < solver.dimTopics; t++)
+    for (int t = 0; t < dimTopics; t++)
       vec[t] -= 100;
   }
 
@@ -445,13 +458,14 @@ public class Topics
    */
   protected String distToString()
   {
+    int dimTopics = getNumber();
     String s = new String();
     String field;
     s += "      " + toHeaderString("    ") + "\n";
-    for (int t = 0; t < solver.dimTopics; t++)
+    for (int t = 0; t < dimTopics; t++)
     {
       s += " " + getName(t);
-      for (int tt = 0; tt < solver.dimTopics; tt++)
+      for (int tt = 0; tt < dimTopics; tt++)
       {
         field = "     " + dist[t][tt];
         s += field.substring(field.length() - 5);
@@ -469,9 +483,10 @@ public class Topics
    */
   public String toHeaderString(String space)
   {
+    int dimTopics = getNumber();
     StringBuffer s = new StringBuffer();
     
-    for (int t = 0; t < solver.dimTopics; t++)
+    for (int t = 0; t < dimTopics; t++)
       s.append(getName(t) + space);
     
     return s.toString();
@@ -486,10 +501,11 @@ public class Topics
    */
   public String groupsToString(int groups[], int groupsCount)
   {
+    int dimTopics = getNumber();
     String s = new String();
     for (int gr = 0; gr < groupsCount; gr++)
     {
-      for (int t = 0; t < solver.dimTopics; t++)
+      for (int t = 0; t < dimTopics; t++)
       {
         if (groups[t] != gr)
           continue;
@@ -507,8 +523,12 @@ public class Topics
    */
   public String toString()
   {
+    int dimTopics = getNumber();
+    int dimPersons = solver.getPersons().getNumber();
+    
     String s = new String();
-    for (int t = 0; t < solver.dimTopics; t++)
+    
+    for (int t = 0;  t < dimTopics;  t++)
     {
       int tt = rankInx[t];
       s += "      " + getName(tt) + " " + (pref[tt] + dimPersons) + "\n";

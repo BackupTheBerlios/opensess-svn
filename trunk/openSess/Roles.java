@@ -57,10 +57,9 @@ public class Roles
    * 
    * @param solver the Solver object containing configuration information.
    */
-  public Roles(Solver solver)
+  public Roles(Solver solver, int dimRoles)
   {
     names = new DefaultListModel();
-    int dimRoles = solver.dimRoles;
     minPerSession = new int[dimRoles];
     maxPerSession = new int[dimRoles];
     

@@ -2,7 +2,7 @@
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id$
+ * Revision ID: $Id: Solver.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * 2005-02-14/AW: Changes to decrease excessive memory allocation/deallocation
  * 2005-02-22/GS: Algorithm bug fixes
@@ -24,6 +24,9 @@
  */
 
 package openSess;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.Random;
 import java.util.Vector;
 
 import javax.swing.DefaultListModel;
@@ -33,39 +36,41 @@ import javax.swing.DefaultListModel;
  * It maintains the dimensions of the various object lists
  * as well as the object lists themselves. It provides
  * the solution algorithm and analysis functions.
- * 
- * TODO: Maybe the class is a bit too central and should be
- *       restructured. Also, the separation of concerns between
- *       Solver and PTAlloc is not quite clear (andreas).
+ * The algorithm must be executed in a different thread, therefore
+ * it is implemented as the doTask() method of a TaskMonitor.
  *  
  * @author Gero Scholz
  */
 public class Solver
+extends TaskMonitor
 {
-  int                      dimPersons;
-  int                      dimRoles;
-  int                      dimTopics;
   private int              dimSessions;
   private int              dimShuffle   = 100;  // the greater the more randomly
                                                 // preferences will
                                                 // be distributed.
                                                 // should be 3 * dimTopics or more, values < 3 will lead
                                                 // to pathologic / trivial distributions
-  int                      dimBalancing = 20;   // weight of a component in the
+  private int              dimBalancing = 20;   // weight of a component in the
                                                 // target function which
                                                 // favors evenly distributed solutions; try values between
                                                 // 0 and 100 (or greater); large values will usually tend
                                                 // to make the overall result worse
-
   private Topics           topics;
   private Persons          persons;
   private Roles            roles;
-  private int              current      = 0;
-  private boolean          taskDone     = false;
-  private boolean          taskCanceled = false;
-  private String           statMessage;
   private Vector           solutions;
   private DefaultListModel solutionNames;
+  private int              dimTryTopicClustering;
+  private int              dimTryPersonAssignment;
+  private int              dimTryAlloc;
+  private boolean          debug;
+  private Solution         solution;
+  private int              bestAssignment[][];
+  private int              topicRole[][];
+  private int              personRole[][];
+  private int              seqPersons[][];
+  private NumberFormat     compactFormat;
+  private boolean          solved;
   
   /*
    * currently there is a tendency to find an ideal solution for some persons
@@ -73,14 +78,6 @@ public class Solver
    * function of the allocation process could change this.
    */
 
-  /*
-  public static void main(String[] args)
-  {
-    System.out.println("\nOpenSess allocation solver 0.1 by Gero Scholz");
-    new Solver().solve(2, 3, 100000);
-  }
-  */
-  
   /**
    * Create a new Solver with the specified dimensions.
    * 
@@ -91,20 +88,26 @@ public class Solver
    */
   public Solver(int dimTopics, int dimPersons, int dimRoles, int dimSessions)
   {
-    this.dimTopics   = dimTopics;
-    this.dimPersons  = dimPersons;
-    this.dimRoles    = dimRoles;
     this.dimSessions = dimSessions;
 
-    topics        = new Topics(this);
-    persons       = new Persons(this);
-    roles         = new Roles(this);
+    topics        = new Topics(this, dimTopics);
+    persons       = new Persons(this, dimPersons, dimTopics);
+    roles         = new Roles(this, dimRoles);
     solutions     = new Vector();
     solutionNames = new DefaultListModel();
-    
-    //persons.setRandomPrefs(new Random(4711),dimShuffle);
   }
 
+  /**
+   * Return the weight of a component in the target function which
+   * favors evenly distributed solutions.; try values between
+   * 
+   * @return the balancing weight.
+   */
+  public int getBalancingWeight()
+  {
+    return dimBalancing;
+  }
+  
   /**
    * Return the number of sessions.
    * 
@@ -178,10 +181,7 @@ public class Solver
   
   /**
    * Start a solution calculation as a separate task.
-   * This is neccessary in order not to block the GUI thread,
-   * however I do not know why this has to be so complicated.
-   * All this impressive handwaving was copied from Javasoft 
-   * example code...
+   * This is neccessary in order not to block the GUI thread.
    * 
    * @param dimTryTopicClustering  the number of topic clusterings to try.
    * @param dimTryPersonAssignment the number of topic/person assignments to try.
@@ -192,102 +192,19 @@ public class Solver
                              int dimTryAlloc)
   {
     final Solver theSolverItself = this;
-    final int clusterings = dimTryTopicClustering;
-    final int assignments = dimTryPersonAssignment;
-    final int allocs = dimTryAlloc;
-    
-    final SwingWorker worker = new SwingWorker()
-    {
-      public Object construct()
-      {
-        current = 0;
-        taskDone = false;
-        taskCanceled = false;
-        statMessage = null;
-        return new SolverTask(theSolverItself, clusterings, assignments, allocs); 
-      }
-    };
-    
-    worker.start();
+    this.dimTryTopicClustering = dimTryTopicClustering;
+    this.dimTryPersonAssignment = dimTryPersonAssignment;
+    this.dimTryAlloc = dimTryAlloc;
+    startTask();
   }
   
-  /**
-   * SolverTask wraps the actual work to do in a way that is
-   * compatible with the SwingWorker.
-   * 
-   * @author andreas
-   */
-  private class SolverTask
-  {
-    /**
-     * The constructor contains the actual work to do
-     * (which is our solution calculation).
-     * 
-     * @param solver the Solver object.
-     * @param dimTryTopicClustering  the number of topic clusterings to try.
-     * @param dimTryPersonAssignment the number of topic/person assignments to try.
-     * @param dimTryAlloc            the maximum number of assignments to try.
-     */
-    public SolverTask(Solver solver, int dimTryTopicClustering, 
-                      int dimTryPersonAssignment,
-                      int dimTryAlloc)
-    {
-      solver.solve(dimTryTopicClustering, dimTryPersonAssignment, dimTryAlloc);
-    }
-  };
-  
-  /**
-   * Return the current progress (which is in the range
-   * 0 to (dimTryTopicClustering*dimTryPersonAssignment)).
-   * 
-   * @return the current progress.
-   */
-  public int getCurrent()
-  {
-    return current;
-  }
-
-  /**
-   * Can be used to cancel the task from the outside.
-   */
-  public void stop()
-  {
-    taskCanceled = true;
-    statMessage = null;
-  }
-
-  /**
-   * Returns whether the task has completed.
-   * 
-   * @return true if completed, false otherwise.
-   */
-  public boolean isDone()
-  {
-    return taskDone;
-  }
-
-  /**
-   * Returns the most recent status message, or null
-   * if there is no current status message.
-   * 
-   * @return a status message.
-   */
-  public String getMessage()
-  {
-    return statMessage;
-  }
 
   /**
    * Perform the calculation of solutions.
    * This should not be called in a GUI thread, use startSolverTask()
    * instead.
-   * 
-   * @param dimTryTopicClustering  the number of topic clusterings to try.
-   * @param dimTryPersonAssignment the number of topic/person assignments to try.
-   * @param dimTryAlloc            the maximum number of assignments to try.
    */
-  public void solve(int dimTryTopicClustering, int dimTryPersonAssignment,
-                    int dimTryAlloc)
+  protected void doTask()
   {
   	// added update of preference index -- GS - 2005-02-22
     persons.createPrefInx();
@@ -319,12 +236,14 @@ public class Solver
     // make several tries
     solutionNames.removeAllElements();
     solutions.removeAllElements();
-    Vector  done = new Vector();
-    PTAlloc pt   = new PTAlloc(this);
+    allocate();
 
+    Vector  done = new Vector();
+    int     dimTopics = topics.getNumber();
+    
     for (int tryT = 0; tryT < dimTryTopicClustering; tryT++)
     {
-      statMessage = "Topic Clustering Attempt " + tryT;
+      setMessage("Topic Clustering Attempt " + tryT);
       
       int topicGroup[] = topics.createGroup(dimSessions, done, dimTopics
                                                                * dimTopics
@@ -341,27 +260,416 @@ public class Solver
 
       // for each clustering we try several assigments
       // of persons to topics (and roles)
-      
       for (int tryP = 0; tryP < dimTryPersonAssignment; tryP++)
       {
-        current = tryT*dimTryPersonAssignment + tryP;
+        setCurrent(tryT*dimTryPersonAssignment + tryP);
         
-        if (taskCanceled)
+        if (taskWasCanceled())
           return;
         
         // first the assignment is done without a specific role
-        pt.init(topicGroup, dimTryAlloc, tryP * 4711 + 8812);
+        assignPersonsToSessions(topicGroup, dimTryAlloc, tryP * 4711 + 8812);
         
         // thereafter the roles are assigned
-        pt.assignRoles();
+        assignRoles();
 
         // System.out.print(pt);
         
-        if (pt.isValidSolution())
-          addSolution(pt.createSolution(solutions.size()));
+        if (isValidSolution())
+          addSolution(createSolution(solutions.size()));
+      }
+    }
+  }
+  
+  /**
+   * Return true if the PTAlloc currently holds a valid solution.
+   * 
+   * @return true if the solution is valid, false otherwise.
+   */
+	public boolean isValidSolution()
+	{
+	  return solved;
+	}
+
+  /**
+   * Allocates global data structures for the algorithm.
+   * It creates the necessary arrays which are used in subsequent
+   * calculations. Each calculation must be set up by a call to 
+   * assignPersonsToSessions().
+   */
+  public void allocate()
+  {
+    debug            = false;
+    this.solved      = false;
+    
+    int     dimPersons     = persons.getNumber();
+    int     dimTopics      = topics.getNumber();
+    int     dimRoles       = roles.getNumber();
+    int     nAssignments = dimPersons * dimTopics / dimSessions;
+    
+    bestAssignment   = new int[dimPersons][dimTopics];
+    topicRole        = new int[dimTopics][dimRoles + 1];
+    personRole       = new int[dimPersons][dimRoles  + 1];
+    seqPersons       = new int[nAssignments + 1][2];
+    
+    // Prepare a number formatter
+    compactFormat = NumberFormat.getInstance();
+    compactFormat.setMinimumFractionDigits(2);
+    compactFormat.setMaximumFractionDigits(2);
+    
+    if (debug)
+    {
+      System.out
+          .println("\nPersonen und Präferenzen bei gegebener Themengruppierung:");
+      System.out.println("\n" + persons.emptyName() + ":   "
+                         + topics.toHeaderString("   "));
+      for (int p = 0;  p < dimPersons;  p++)
+      {
+        System.out.print(persons.getName(p) + ":");
+        for (int t = 0;  t < dimTopics; t++)
+        {
+          String tmp = "    " + persons.getPreferenceIndex(p, t);
+          System.out.print(tmp.substring(tmp.length() - 4));
+        }
+        
+        System.out.println();
+      }
+    }
+  }
+
+  /**
+   * Initialize a calculation by performing a first assignment 
+   * without specific roles.
+   * 
+   * @param groups  the group of topics to work on.
+   * @param tries   the maximum number of tries.
+   * @param seed    the seed for the random number generator.
+   */
+  public void assignPersonsToSessions(int[] groups, int tries, long seed)
+  {
+    int     dimPersons     = persons.getNumber();
+    int     dimTopics      = topics.getNumber();
+    int     dimSessions    = getSessionNumber();
+    int     unassignedRole = getRoles().getNumber() + 1;  // Marker for an unassigned role
+
+    // Start a new solution
+    solution = new Solution(this);
+    
+    // Remember the topic grouping in the solution
+    for (int gr = 0;  gr < groups.length;  ++gr)
+    {
+      int groupIndex = 0;
+      
+      for (int t = 0;  t < dimTopics;  ++t)
+        if (groups[t] == gr)
+          solution.setGroupElement(gr, groupIndex++, t);
+    }
+
+    // Erase bestAssignment
+    for (int person = 0;  person < dimPersons;  ++person)
+      Arrays.fill(bestAssignment[person], 0);
+    
+    // we generate a legal assignment as a starting point;
+    for (int gr = 0; gr < groups.length / dimSessions; gr++)
+      for (int p = 0; p < dimPersons; p++)
+      {
+        int seq = 0;
+        
+        for (int t = 0; t < dimTopics; t++)
+          if (groups[t] == gr)
+          {
+            if (p / (dimPersons / dimSessions) == seq)
+              solution.setRole(p, t, unassignedRole);
+
+            ++seq;
+          }
+      }
+
+    int target = solution.calculateTargetValue();
+
+    if (debug)
+    {
+      System.out.println("\n" + persons.emptyName() + ":  "
+                         + topics.toHeaderString(" "));
+      System.out.println(this + "target=" + target);
+    }
+
+    // again we apply simulated annealing; we try to swap people
+    // between sessions of the same group
+
+    // simulated annealing; we look for better solutions and
+    // adopt them in most cases (80%) as a starting point for the next trial
+    // sometimes we accept worse solutions and temporarily lower the
+    // expectation level
+
+    int bestTargetTotal = Integer.MAX_VALUE;
+    int bestTarget = Integer.MAX_VALUE;
+    int lastTarget = target;
+    Random rand = new Random();
+    
+    if (seed != 0)
+      rand = new Random(seed);
+
+    for (int y = 0; y < tries; y++)
+    {
+      // modify constellation, later restore possible
+      int p1 = 0, t1 = 0, p2 = 0, t2 = 0;
+      p1 = rand.nextInt(dimPersons);
+      t1 = rand.nextInt(dimTopics / dimSessions);
+      // look for a topic the selected person is assigned to
+      for (int t = 0; t < dimTopics; t++)
+        if (solution.getRole(p1, t) > 0)
+          if (t1-- <= 0)
+          {
+            t1 = t;
+            break;
+          }
+
+        // pick a member of another topic of the same session
+      int n = rand.nextInt(dimPersons - dimPersons / dimSessions);
+      
+      for (int t = 0;  t < dimTopics;  t++)
+        if (groups[t] == groups[t1] && t1 != t)
+          for (int p = 0;  p < dimPersons;  p++)
+            if (solution.getRole(p, t) > 0 && n-- <= 0)
+            {
+              p2 = p;
+              t2 = t;
+              break;
+            }
+      
+      solution.setRole(p1, t1, 0);
+      solution.setRole(p1, t2, unassignedRole);
+      solution.setRole(p2, t1, unassignedRole);
+      solution.setRole(p2, t2, 0);
+
+      // calculate target value
+      lastTarget = target;
+      target = solution.calculateTargetValue();
+
+      if (debug)
+      {
+        System.out.println("\np1=" + p1 + " t1=" + topics.getName(t1)
+                           + "  /  p2=" + p2 + " t2=" + topics.getName(t2));
+        System.out.println(this + "target=" + target + "   (" + bestTarget
+                           + ")  (" + bestTargetTotal + ")");
+      }
+
+      if (target < bestTargetTotal)
+      {
+        // check if solution is known already
+        boolean known = false;
+        
+        if (!known)
+        {
+          bestTargetTotal = target;
+          // store best result
+          for (int p = 0; p < dimPersons; p++)
+            for (int t = 0; t < dimTopics; t++)
+              bestAssignment[p][t] = solution.getRole(p, t);
+
+          if (debug)
+            System.out.println("BEST ASSIGNMENT");
+        }
+      }
+      
+      if (target < bestTarget)
+      {
+        if (rand.nextInt(100) >= 100)
+        {
+          // take back
+          solution.setRole(p1, t1, unassignedRole);
+          solution.setRole(p1, t2, 0);
+          solution.setRole(p2, t1, 0);
+          solution.setRole(p2, t2, unassignedRole);
+          target = lastTarget;
+          
+          //if (debug)
+            System.out.println("better, but staying.");
+        }
+        else
+        {
+          // accept
+          bestTarget = target;
+          
+          if (debug)
+            System.out.println("better, moving.");
+        }
+      }
+      else
+      {
+        if (rand.nextInt(100) >= 0)
+        {
+          // take back
+          solution.setRole(p1, t1, unassignedRole);
+          solution.setRole(p1, t2, 0);
+          solution.setRole(p2, t1, 0);
+          solution.setRole(p2, t2, unassignedRole);
+          target = lastTarget;
+          if (debug)
+            System.out.println("worse, staying");
+        }
+        else
+        {
+          // accept
+          bestTarget = target;
+          //if (debug)
+            System.out.println("worse, but moving.");
+        }
+      }
+    }
+
+    for (int p = 0; p < dimPersons; p++)
+      for (int t = 0; t < dimTopics; t++)
+        solution.setRole(p, t, bestAssignment[p][t]);
+
+    if (debug)
+    {
+      target = solution.calculateTargetValue();
+      System.out.println(this + "target=" + target + "  bestTargetTotal="
+                         + bestTargetTotal);
+    }
+  }
+
+  /**
+   * Assign the roles to produce a solution.
+   * After calling this method, isValidSoution() should be used
+   * to check whether a valid solution has been reached.
+   */
+  void assignRoles()
+  {
+    int dimPersons     = persons.getNumber();
+    int dimTopics      = topics.getNumber();
+    int dimSessions    = getSessionNumber();
+    int dimRoles       = getRoles().getNumber();
+    int nAssignments   = dimPersons * dimTopics / dimSessions;
+    int unassignedRole = dimRoles + 1; // Marker for an unassigned role
+
+    for (int topic = 0;  topic < dimTopics;  ++topic)
+      Arrays.fill(topicRole[topic], 0);
+
+    for (int person = 0;  person < dimPersons;  ++person)
+      Arrays.fill(personRole[person], 0);
+
+    for (int as = 0;  as < nAssignments + 1;  ++as)
+      Arrays.fill(seqPersons[as], 0);
+
+    int topicLimit  = dimPersons / dimSessions / dimRoles;
+    int personLimit = dimTopics / dimSessions / dimRoles;
+
+    // for every role we repeat the same procedure:
+    // we try to allocate the role according to the preference of the person
+    // we perform backtracking to find a valid solution
+    boolean debug = false;
+
+    if (debug)
+      System.out.println(this);
+
+    // we define the sequence in which we want to assign roles to the persons
+    // we change the sequence of persons for each step to prevent a bias
+		int noStep   = 0;
+		int maxSteps = 100000; // Integer.MAX_VALUE;
+		solved = true;
+		
+    for (int n = 0; n < nAssignments; n++)
+    {
+      int p = n % dimPersons;
+      int cycle = n / dimPersons;
+      seqPersons[n][0] = (cycle % 2 == 0) ? p : dimPersons - 1 - p;
+    }
+
+    for (int n = 0; n < nAssignments; n++)
+    {
+			if (++noStep > maxSteps)
+			{
+			  solved = false;
+			  break;
+			}
+			
+      int r = (n / (nAssignments / dimRoles)) + 1;
+      int p = seqPersons[n][0];
+      boolean ok = false;
+      int t = 0, prio;
+      
+      for (prio = seqPersons[n][1]; prio < dimTopics; prio++)
+      {
+        t = persons.getPreferenceIndex(p, prio);
+        
+        if (solution.getRole(p, t) == unassignedRole)
+        {
+          if (debug)
+            System.out.print("n=" + n + " r=" + r + " p=" + p + " t=" + t);
+          
+          // try to assign the role
+          if (topicRole[t][r] < topicLimit && personRole[p][r] < personLimit)
+          {
+            solution.setRole(p, t, r);
+            topicRole[t][r] += 1;
+            personRole[p][r] += 1;
+            
+            if (debug)
+              System.out.println("  assigned.");
+            
+            ok = true;
+            break;
+          }
+          else
+          {
+            ok = false;
+            
+            if (debug)
+              System.out.println("  not possible.");
+          }
+        }
+      }
+      
+      if (ok)
+      { // going forward, reset minPrio for next n
+        seqPersons[n][1] = prio + 1;
+        seqPersons[n + 1][1] = 0;
+      }
+      else
+      { // back tracking
+        n -= 1;
+
+        p = seqPersons[n][0];
+        t = persons.getPreferenceIndex(p, seqPersons[n][1] - 1);
+        solution.setRole(p, t, unassignedRole);
+        topicRole[t][r] -= 1;
+        personRole[p][r] -= 1;
+        n -= 1;
       }
     }
     
-    taskDone = true;
+		// System.out.println (noStep + " steps performed.");
   }
+
+ 
+  /**
+   * Create a Solution object from the current solution.
+   * 
+   * @param index this is the current number of the solution.
+   *              Will be used to give the solution an initial name
+   *              ("Solution &lt;index&gt;").
+   * @return the new Solution object.
+   */
+  public Solution createSolution(int index)
+  {
+    if (!solved)
+      return null;
+
+    solution.evaluate();
+    
+    StringBuffer name = new StringBuffer("Solution " + (index+1));
+    name.append(": ");
+    name.append(compactFormat.format(solution.getMeanDeviation()));
+    name.append(" - ");
+    name.append(compactFormat.format(solution.getMaximumDeviation()));
+    name.append(" - ");
+    name.append(compactFormat.format(solution.getStandardDeviation()));
+    solution.setName(name.toString());
+    
+    return solution;
+  }
+  
 }

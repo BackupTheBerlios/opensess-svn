@@ -6,7 +6,7 @@ import java.util.Arrays;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     18.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: Solution.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -49,12 +49,15 @@ public class Solution
    */
   Solution(Solver solver)
   {
+    int dimTopics = solver.getTopics().getNumber();
+    int dimSessions = solver.getSessionNumber();
+    int dimPersons  = solver.getPersons().getNumber(); 
     this.solver = solver;
-    groupNumber = solver.getTopics().getNumber() / solver.getSessionNumber();
-    groupSize   = solver.getSessionNumber();
-    group = new int[groupNumber][groupSize];
-    role = new int[solver.getPersons().getNumber()][solver.getTopics().getNumber()];
-    personSum = new int[solver.getPersons().getNumber()];
+    groupNumber = dimTopics / dimSessions;
+    groupSize   = dimSessions;
+    group       = new int[groupNumber][groupSize];
+    role        = new int[dimPersons][dimTopics];
+    personSum   = new int[dimPersons];
   }
 
   /**
@@ -124,6 +127,14 @@ public class Solution
     return -1;
   }
   
+  public void clearRoles()
+  {
+    int dimPersons = solver.getPersons().getNumber();
+    
+    for (int person = 0;  person < dimPersons;  ++person)
+      Arrays.fill(role[person], 0);  
+  }
+  
   /**
    * Return the role of the specified person with regard to the specified topic.
    * @param person the person.
@@ -144,6 +155,43 @@ public class Solution
   public int getPersonSum(int person)
   {
     return personSum[person];
+  }
+	
+	/**
+	 * Calculates the target value of the current assignment.
+	 * 
+	 * @return the target value.
+	 */
+  protected int calculateTargetValue()
+  {
+    Persons persons    = solver.getPersons();
+    Topics  topics     = solver.getTopics();
+    int     dimPersons = persons.getNumber();
+    int     dimTopics  = topics.getNumber();
+    
+		int pval[] = new int[dimPersons];
+    int val = 0;
+
+    for (int p = 0;  p < dimPersons;  ++p)
+    {
+      for (int t = 0;  t < dimTopics; ++t)
+        if (getRole(p, t) > 0)
+          pval[p] += persons.getPreferenceIndex(p, t);
+
+      val += pval[p];
+    }
+    
+    double mean = (val * 1.0 / dimPersons);
+    double dev = 0;
+    
+    for (int p = 0;  p < dimPersons;  ++p)
+      dev += (mean - pval[p]) * (mean - pval[p]);
+
+    dev = Math.sqrt(dev / dimPersons);
+    val += solver.getBalancingWeight() * dev;
+    targetValue = val;
+    
+    return val;
   }
   
   /**
@@ -228,22 +276,58 @@ public class Solution
   {
     personSum[person] = sum;
   }
-
+  
   /**
-   * Set the statistical values of this solution.
-   * 
-   * @param meanDeviation the mean deviation.
-   * @param maxDeviation  the maximum deviation.
-   * @param stdDeviation  the standard deviation.
-   * @param targetValue   the target value.
+   * Evaluate the solution and set the statistical values.
    */
-  public void setStatistics(double meanDeviation, double maxDeviation, 
-                            double stdDeviation, int targetValue)
+  protected void evaluate()
   {
-    this.meanDeviation = meanDeviation;
-    this.maxDeviation  = maxDeviation;
-    this.stdDeviation  = stdDeviation;
-    this.targetValue   = targetValue;
+    Persons persons = solver.getPersons();
+    int     dimPersons = persons.getNumber();
+    int     dimTopics  = solver.getTopics().getNumber();
+    int     dimSessions = solver.getSessionNumber();
+    float   total = 0;
+    int     sumMax = 0;
+    int     pval[] = new int[dimPersons];
+    int     val = 0;
+    
+    for (int p = 0; p < dimPersons; p++)
+    {
+      for (int t = 0; t < dimTopics; t++)
+        if (getRole(p, t) > 0)
+          pval[p] += persons.getPreferenceIndex(p, t);
+      
+      val += pval[p];
+    }
+    
+    double mean = ((double)val) / dimPersons;
+    double dev = 0;
+    
+    for (int p = 0;  p < dimPersons;  p++)
+      dev += (mean - pval[p]) * (mean - pval[p]);
+    
+    dev = Math.sqrt(dev / dimPersons);
+         
+    for (int p = 0; p < dimPersons; p++)
+    {
+      int sum = -(dimTopics / dimSessions)
+                * ((dimTopics / dimSessions) - 1) / 2;
+      
+      for (int t = 0; t < dimTopics; t++)
+        if (getRole(p, t) > 0)
+          sum += persons.getPreferenceIndex(p, t); 
+      
+      personSum[p] = sum;
+      
+      total += sum;
+      
+      if (sumMax < sum)
+        sumMax = sum;
+    }
+
+    meanDeviation = total / dimPersons;
+    maxDeviation  = sumMax;  
+    stdDeviation  = dev;
   }
 
   /**
@@ -301,4 +385,37 @@ public class Solution
     
     Indenter.println(stream, level, "</solution>");
   }
+  
+  public String toString()
+  {
+    Persons persons = solver.getPersons();
+    Topics  topics  = solver.getTopics();
+    int     dimPersons = persons.getNumber();
+    int     dimTopics  = topics.getNumber();
+    
+    // return the final allocation matrix
+    StringBuffer s = new StringBuffer(persons.emptyName() + "   " + topics.toHeaderString(" ") + "\n");
+         
+    for (int p = 0; p < dimPersons; p++)
+    {
+      s.append(persons.getName(p) + "  ");
+
+      for (int t = 0; t < dimTopics; t++)
+        s.append(" " + solver.getRoles().getNameExtended(getRole(p, t)));
+
+      String tmp = "       " + personSum[p];
+
+      s.append(tmp.substring(tmp.length() - 5) + "\n");
+    }
+    
+    s.append(persons.emptyName() + "   " + topics.toHeaderString(" ") + "\n");
+    s.append("    mittlere Abweichung=" + getMeanDeviation()
+         + "    maximale Abweichung=" + getMaximumDeviation()  
+         + "    Standardabw.=" + getStandardDeviation()
+         + "    target=" + calculateTargetValue()
+         + "\n\n");
+    
+    return s.toString();
+  }
+
 }

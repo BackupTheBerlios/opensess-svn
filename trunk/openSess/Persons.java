@@ -9,7 +9,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id$
+ * Revision ID: $Id: Persons.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * 2005-02-22/GS: Algorithm bug fixes
  * 
@@ -41,8 +41,8 @@ public class Persons
   private DefaultListModel names;
   private static int       nameLen = 30;
   
-  public int              pref[][];    /** the topics ordered by preference */
-  public int              prefInx[][]; /** the rank of the preference for each topic */
+  private int              pref[][];    /** the topics ordered by preference */
+  private int              prefInx[][]; /** the rank of the preference for each topic */
 
   /**
    * Constructs a new Persons object. Uses the configuration data in a
@@ -50,22 +50,22 @@ public class Persons
    * 
    * @param solver the Solver object.
    */
-  public Persons(Solver solver)
+  public Persons(Solver solver, int dimPersons, int dimTopics)
   {
     this.solver = solver;
-
+    
     // store the names
     names = new DefaultListModel();
     
-    for (int p = 0; p < solver.dimPersons; p++)
+    for (int p = 0; p < dimPersons; p++)
       names.addElement("Person " + (p+1));
 
     // create an initial preference structure
-    pref = new int[solver.dimPersons][solver.dimTopics];
-    prefInx = new int[solver.dimPersons][solver.dimTopics];
-    for (int p = 0; p < solver.dimPersons; p++)
+    pref = new int[dimPersons][dimTopics];
+    prefInx = new int[dimPersons][dimTopics];
+    for (int p = 0; p < dimPersons; p++)
     {
-      for (int t = 0; t < solver.dimTopics; t++)
+      for (int t = 0; t < dimTopics; t++)
       {
         prefInx[p][t] = pref[p][t] = t;
       }
@@ -130,6 +130,19 @@ public class Persons
   }
   
   /**
+   * For the indicated person, return the index that the specified
+   * topic has in the preferences list.
+   *  
+   * @param person the person index.
+   * @param topic  the topic index.
+   * @return the index in the preferences list.
+   */
+  public int getPreferenceIndex(int person, int topic)
+  {
+    return prefInx[person][topic];
+  }
+  
+  /**
    * For the indicated person, swap the topics at indeces "first" and "second"
    * in the preferences list.
    * 
@@ -167,12 +180,15 @@ public class Persons
   {
     // assign random preferences by randomly swapping pairs of
     // the initial preference structure
-    for (int p = 0;  p < solver.dimPersons;  p++)
+    int dimPersons = solver.getPersons().getNumber();
+    int dimTopics  = solver.getTopics().getNumber();
+    
+    for (int p = 0;  p < dimPersons;  p++)
     {
       for (int i = 0;  i < shuffle;  i++)	
       {
-        int j = rand.nextInt(solver.dimTopics);
-        int k = rand.nextInt(solver.dimTopics);
+        int j = rand.nextInt(dimTopics);
+        int k = rand.nextInt(dimTopics);
         int tmp = pref[p][j];
         pref[p][j] = pref[p][k];
         pref[p][k] = tmp;
@@ -186,8 +202,11 @@ public class Persons
    */
   protected void createPrefInx()
   {
-    for (int p = 0; p < solver.dimPersons; p++)
-      for (int t = 0; t < solver.dimTopics; t++)
+    int dimPersons = solver.getPersons().getNumber();
+    int dimTopics  = solver.getTopics().getNumber();
+
+    for (int p = 0; p < dimPersons; p++)
+      for (int t = 0; t < dimTopics; t++)
         prefInx[p][pref[p][t]] = t;
   }
 
@@ -198,11 +217,14 @@ public class Persons
    */
   public String ranks()
   {
+    int dimPersons = solver.getPersons().getNumber();
+    int dimTopics  = solver.getTopics().getNumber();
     String s = new String();
-    for (int p = 0; p < solver.dimPersons; p++)
+    
+    for (int p = 0; p < dimPersons; p++)
     {
       s += getName(p) + ":";
-      for (int t = 0; t < solver.dimTopics; t++)
+      for (int t = 0; t < dimTopics; t++)
       {
         String tmp = "   " + (pref[p][t] + 1);
         s += tmp.substring(tmp.length() - 3);
@@ -239,15 +261,18 @@ public class Persons
    */
   public String toString()
   {
+    int dimPersons = solver.getPersons().getNumber();
+    int dimTopics  = solver.getTopics().getNumber();
     String s = new String();
-    for (int p = 0; p < solver.dimPersons; p++)
+    
+    for (int p = 0; p < dimPersons; p++)
     {
       s += getName(p) + ":  ";
-      for (int t = 0; t < solver.dimTopics; t++)
+      for (int t = 0; t < dimTopics; t++)
       {
       	// changed prefInx to pref -- GS - 2005-02-22
         s += solver.getTopics().getName(pref[p][t]);
-        if (t < solver.dimTopics - 1)
+        if (t < dimTopics - 1)
           s += "__";
       }
       s += "\n";

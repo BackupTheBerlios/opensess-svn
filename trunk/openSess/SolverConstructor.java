@@ -107,11 +107,13 @@ public class SolverConstructor
       currentSolution.setName(getString(attributes, "name", solution));
       main.getSolver().addSolution(currentSolution);
     }
+/*
     else if (qName.equals("statistics"))
       currentSolution.setStatistics(getDouble(attributes, "meandev", 0.0),
                                     getDouble(attributes, "maxdev",  0.0),
                                     getDouble(attributes, "stddev",  0.0),
                                     getInt(attributes, "target",     0));
+*/                                    
     else if (qName.equals("topicGroups"))
       group = -1;
     else if (qName.equals("topicGroup"))
