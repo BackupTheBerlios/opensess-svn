@@ -7,6 +7,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11
+ * Revision ID: $Id$
  * 
  * 2005-02-17/AW: Complete rewrite for GUI.
  * 
