@@ -2,7 +2,10 @@
 Release Notes for OpenSess 0.5
 ==============================
 
-This is the first official release of OpenSess.
+This is the first official release of OpenSess, a program that 
+helps you to organize discussion of various topics in parallel 
+sessions where the participants have different preferences for 
+individual topics and can play several roles.
 It is still something of a pre-release since at the moment
 the program produces as many solutions as you want, but does
 not help you much in selecting the best solution.
