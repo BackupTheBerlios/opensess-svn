@@ -51,9 +51,19 @@
         </p>
       </li>
       <li>
+        <p>The number of <em>roles</em> that participants can have in a session.
+          Typical roles are "moderator", "critic" or "observer".
+          OpenSess currently allocates an equal number of participants to
+          each role so you will have as many moderators as critics and 
+          observers. This might change in a later release of OpenSess.
+        </p>
+      </li>
+      <li>
         <p>The number of <em>participants</em> that attend the meeting.
-          The number of participants must be divisible by the number of
-          sessions.
+          The algorithm currently used by OpenSess demands that
+          the number of participants must be divisible by the product 
+          of the number of sessions and the number of roles.
+          Later versions of OpenSess will probably relax that constraint.
         </p>
       </li>
       <li>
@@ -65,18 +75,9 @@
           have <em>rounds*sessions</em> topics, or you can start with
           a fixed number of topics, which means that you will have
           <em>topics/sessions</em> rounds.
-        </p>
-      </li>
-      <li>
-        <p>The number of <em>roles</em> that participants can have in a session.
-          Typical roles are "moderator", "critic" or "observer".
-          the algorithm currently used by OpenSess demands that both the
-          number of participants and the number of topics must also be
-          divisible by the number of roles, but later versions of OpenSess
-          will probably lift that constraint.
-          OpenSess currently allocates an equal number of participants to
-          each role so you will have as many moderators as critics and 
-          observers. This might also change in a later release of OpenSess.
+          In addition, the number of topics must also be divisible by 
+          the product of the number of sessions and the number of roles
+          (and that constraint might also be relaxed in the future).
         </p>
       </li>
     </ul>

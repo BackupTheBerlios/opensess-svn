@@ -19,7 +19,7 @@ import javax.swing.JPanel;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     13.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: GlobalNewWindow.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -159,8 +159,8 @@ public class GlobalNewWindow
       int roles    = getNumberOfRoles();
       int sessions = getNumberOfSessions();
       
-      boolean topicsOk = (topics % roles) == 0 && (topics % sessions) == 0;
-      boolean personsOk = (persons % roles) == 0 && (persons % sessions) == 0;
+      boolean topicsOk = (topics % (roles*sessions)) == 0;
+      boolean personsOk = (persons % (roles*sessions)) == 0;
       
       if (topicsOk && personsOk)
       {
@@ -172,12 +172,12 @@ public class GlobalNewWindow
         StringBuffer msg = new StringBuffer("The following constraints were violated:\n");
         
         if (!topicsOk)
-          msg.append("- The number of topics must be divisible by the\n"
-                     +	"  number of roles and by the number of sessions\n");
+          msg.append("- The number of topics must be divisible by\n"
+                     +	"  (numberOfRoles * numberOfSessions)\n");
         
         if (!personsOk)
-          msg.append("- The number of persons must be divisible by the\n"
-                     +	"  number of roles and by the number of sessions\n");
+          msg.append("- The number of persons must be divisible by\n"
+                     +	"  (numberOfRoles * numberOfSessions)\n");
         
         JOptionPane.showMessageDialog(this, msg, "Constraint Violation", JOptionPane.ERROR_MESSAGE); 
       }
