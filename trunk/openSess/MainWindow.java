@@ -29,9 +29,25 @@ import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.SAXException;
 
 /*
- * Author:      awi
+ * Copyright 2005 Andreas Wickner
+ * 
  * Created:     2005-02-12
  * Revision ID: $Id: MainWindow.java 49 2005-03-01 13:29:32Z awi $
+ * 
+ * This file is part of OpenSess.
+ * OpenSess is free software; you can redistribute it and/or modify it 
+ * under the terms of the GNU General Public License as published by 
+ * the Free Software Foundation; either version 2 of the License, or 
+ * (at your option) any later version.
+ *
+ * OpenSess is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ * or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License 
+ * for more details.
+ *
+ * You should have received a copy of the GNU General Public License along 
+ * with OpenSess; if not, write to the Free Software Foundation, Inc., 
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
  */
 
 /**
@@ -334,11 +350,11 @@ public class MainWindow
     else if (command.equals("about"))
     {
       String date     = getSubversionString("$LastChangedDate: 2005-03-01 14:29:32 +0100 (Di, 01 Mrz 2005) $");
-      String revision = getSubversionString("$LastChangedRevision$");
+      String revision = getSubversionString("$LastChangedRevision: 1 $");
       
       JOptionPane.showMessageDialog(frame,
                                     programName + "\n\n"	
-                                    + "Version: 0.2." + revision + "\n" 
+                                    + "Version: 0.5 revision " + revision + "\n" 
                                     + "Created: " + date + "\n" 
                                     + "Algorithms: Gero Scholz\n"
                                     + "User Interface: Andreas Wickner");

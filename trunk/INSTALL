@@ -1,0 +1,22 @@
+
+Installing OpenSess
+===================
+
+Just create a directory and unpack the contents of
+opensess-win-XX.XX.zip (where "XX.XX" is the release number) into it.
+You can then start OpenSess by double-clicking "OpenSess.exe" in the
+explorer. Alternatively, you can start "OpenSessConsole.exe" which
+also starts a console window, where any error messages will be displayed.
+
+Uninstalling OpenSess
+=====================
+
+Just delete the directory where you unpacked the OpenSess files.
+
+Requirements
+============
+
+You must have a Java Runtime Environment (JRE) installed. 
+OpenSess was tested with J2SE v1.5.0.
+
+
