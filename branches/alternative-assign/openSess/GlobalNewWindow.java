@@ -159,8 +159,11 @@ public class GlobalNewWindow
       int roles    = getNumberOfRoles();
       int sessions = getNumberOfSessions();
       
-      boolean topicsOk = (topics % (roles*sessions)) == 0;
-      boolean personsOk = (persons % (roles*sessions)) == 0;
+      // temporarily disabled until algorithm question is solved.
+      // boolean topicsOk = (topics % (roles*sessions)) == 0;
+      // boolean personsOk = (persons % (roles*sessions)) == 0;
+      boolean topicsOk = true;
+      boolean personsOk = true;
       
       if (topicsOk && personsOk)
       {

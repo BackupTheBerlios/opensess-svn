@@ -3,12 +3,13 @@ package openSess;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Vector;
 
 /*
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id$
+ * Revision ID: $Id: PTAlloc.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * 2005-02-14/AW: Changes to decrease excessive memory allocation/deallocation.
  * 2005-02-22/GS: Algorithm bug fixes 
@@ -44,7 +45,7 @@ public class PTAlloc
   private Solver       solver;
   private Persons      persons;
   private Topics       topics;
-
+  private Roles        roles;
   private boolean      debug;
   private int          dimSessions;
   private int          groups[];
@@ -59,7 +60,8 @@ public class PTAlloc
   private double       meanDeviation, maxDeviation, stdDeviation;
   private NumberFormat compactFormat;
   private boolean      solved;
-
+  private Random       rand;
+  
   /**
    * Return true if the PTAlloc currently holds a valid solution.
    * 
@@ -114,6 +116,7 @@ public class PTAlloc
     this.solver      = solver;
     this.persons     = solver.getPersons();
     this.topics      = solver.getTopics();
+    this.roles       = solver.getRoles();
     this.dimSessions = solver.getSessionNumber();
     this.solved      = false;
     assigned         = new int[solver.dimPersons][solver.dimTopics];
@@ -210,7 +213,7 @@ public class PTAlloc
     // expectation level
 
     int bestTargetTotal = Integer.MAX_VALUE, bestTarget = Integer.MAX_VALUE, lastTarget = target;
-    Random rand = new Random();
+    rand = new Random();
     
     if (seed != 0)
       rand = new Random(seed);
@@ -459,6 +462,122 @@ public class PTAlloc
   }
 
   /**
+   * An alternative role assignment algorithm
+   *
+   */
+  public void assignRolesAlternative()
+  {
+    debug = false;
+    
+    if (debug)
+      System.out.println("Using role shuffling on initial matrix:\n" + debugString());
+
+    // Determine the number of required roles per session (with minimum occurence)
+    int requiredRoles = 0;
+    
+    for (int r=0;  r < roles.getNumber();  ++r)
+      requiredRoles += roles.getMinimumPerSession(r);
+      
+    if (debug)
+    	System.out.println(requiredRoles + " roles are required per session.");
+
+    // Build a pool of possible roles to choose from for non-required roles.
+    Vector rolePool = new Vector();
+    
+    for (int r=0;  r < roles.getNumber();  ++r)
+    {
+      int optional = roles.getMaximumPerSession(r) - roles.getMinimumPerSession(r);
+      
+      for (int i=0;  i < optional;  ++i)
+      	rolePool.add(new Integer(r));
+    }
+
+    if (debug)
+    	System.out.println("For each session, there are " + rolePool.size() + " roles in the pool of optional roles.");
+    
+    // First, we go through each session and assign the roles with a minimum occurence
+    for (int t=0;  t < topics.getNumber();  ++t)
+      for (int r=0;  r < roles.getNumber();  ++r)
+        for (int n=0;  n < roles.getMinimumPerSession(r);  ++n)
+          assigned[chooseMostInterestedPerson(t)][t] = r+1;
+
+    if (debug)
+    	System.out.println("\nAfter assigning the required roles:\n" + debugString());
+    
+    // Now, we distribute the optional roles for each session
+    for (int t=0;  t < topics.getNumber();  ++t)
+    {
+      // Make a copy of the complete rolePool
+      Vector pool = (Vector) rolePool.clone();
+      
+      // Count the unassigned persons in this session
+      // (this is done to enable this algorithm to cope with a varying 
+      // number of participants per session).
+      int unassigned = 0;
+      
+      for (int p=0;  p < persons.getNumber();  ++p)
+        if (assigned[p][t] == 9)
+          ++unassigned;
+        
+      // Randomly remove roles from the pool until we have the right number
+      while (pool.size() > unassigned)
+      {
+        int index = rand.nextInt(pool.size());
+        pool.remove(index);
+      }
+
+      if (pool.size() != unassigned)
+        System.out.println("CANNOT HAPPEN: pool size wrong.");
+      
+      // Assign the remaining roles in the pool
+      while (pool.size() > 0)  
+      {
+        int index = rand.nextInt(pool.size());
+        int r     = ((Integer)pool.elementAt(index)).intValue();
+        pool.remove(index);
+        assigned[chooseMostInterestedPerson(t)][t] = r+1;
+      }
+    }
+    
+    if (debug)
+    	System.out.println("\nAfter assigning the other roles:\n" + debugString());
+    
+    solved = true;
+    doStatistics();
+    
+    debug = false;
+  }
+  
+  /**
+   * Of all the participants in the session for topic t that have
+   * not yet been assigned a role, return the one with the highest 
+   * interest.
+   * 
+   * @param t the topic of the session.
+   * @return the most interested unassigned pearticipant.
+   */
+  protected int chooseMostInterestedPerson(int t)
+  {
+    // Of all the unassigned persons in this session,
+    // pick the one with the highest interest.
+    int bestPerson = -1;
+    int interest = 99999;
+    
+    for (int p=0;  p < persons.getNumber();  ++p)
+      if (assigned[p][t] == 9)
+        if (persons.prefInx[p][t] < interest)
+        {
+        	bestPerson = p;
+        	interest   = persons.prefInx[p][t];
+        }
+        
+    if (bestPerson < 0)
+      System.out.println("CANNOT HAPPEN: no person left to choose.");
+        
+    return bestPerson;
+  }
+  
+  /**
    * Evaluate the solution and set the statistical values.
    */
   protected void doStatistics()
@@ -553,10 +672,39 @@ public class PTAlloc
     return s;
   }
   
+  public String debugString()
+  {
+    StringBuffer s = new StringBuffer();
+
+    s.append("\ngr: ");
+    for (int t = 0; t < solver.dimTopics; t++)
+      s.append("  " + groups[t]);
+    
+    s.append("\n");
+
+    s.append("    ");
+    for (int t = 0; t < solver.dimTopics; t++)
+      s.append(" T" + t);
+    
+    s.append("\n");
+    
+    for (int p = 0; p < solver.dimPersons; p++)
+    {
+      s.append("P" + p + ": ");
+
+      for (int t = 0; t < solver.dimTopics; t++)
+        s.append("  " + assigned[p][t]);
+      
+      s.append("\n");
+    }
+    
+    return s.toString();
+  }
+  
   public String toString()
   {
-		if (!solved) 
-		  return "suppressing output of unsolved matrix ...\n";
+//		if (!solved) 
+//		  return "suppressing output of unsolved matrix ...\n";
     
     // return the final allocation matrix
     StringBuffer s = new StringBuffer(persons.emptyName() + "   " + topics.toHeaderString(" ") + "\n");

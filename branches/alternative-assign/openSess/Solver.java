@@ -2,7 +2,7 @@
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id$
+ * Revision ID: $Id: Solver.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * 2005-02-14/AW: Changes to decrease excessive memory allocation/deallocation
  * 2005-02-22/GS: Algorithm bug fixes
@@ -56,7 +56,7 @@ public class Solver
                                                 // favors evenly distributed solutions; try values between
                                                 // 0 and 100 (or greater); large values will usually tend
                                                 // to make the overall result worse
-
+  private int              algorithm;
   private Topics           topics;
   private Persons          persons;
   private Roles            roles;
@@ -88,14 +88,17 @@ public class Solver
    * @param dimPersons  the number of persons.
    * @param dimRoles    the number of roles.
    * @param dimSessions the number of sessions.
+   * @param algorithm   the algorithm to use (0 or 1).
    */
-  public Solver(int dimTopics, int dimPersons, int dimRoles, int dimSessions)
+  public Solver(int dimTopics, int dimPersons, int dimRoles, int dimSessions,
+                int algorithm)
   {
     this.dimTopics   = dimTopics;
     this.dimPersons  = dimPersons;
     this.dimRoles    = dimRoles;
     this.dimSessions = dimSessions;
-
+    this.algorithm   = algorithm;
+    
     topics        = new Topics(this);
     persons       = new Persons(this);
     roles         = new Roles(this);
@@ -353,7 +356,10 @@ public class Solver
         pt.init(topicGroup, dimTryAlloc, tryP * 4711 + 8812);
         
         // thereafter the roles are assigned
-        pt.assignRoles();
+        if (algorithm == 0)
+          pt.assignRoles();
+        else
+          pt.assignRolesAlternative();
 
         // System.out.print(pt);
         

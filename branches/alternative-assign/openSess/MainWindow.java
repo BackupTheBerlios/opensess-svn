@@ -62,6 +62,7 @@ public class MainWindow
   extends ChangeMonitor
   implements ActionListener, CommandProcessor, XMLStateSaving
 {
+  private final int          algorithm   = 1;
   private final String       programName = "OpenSess";
   private final String       fileSuffix  = "ose";
   private JFrame             frame;
@@ -396,7 +397,7 @@ public class MainWindow
     rolePanel.hideEditor();
     solutionPanel.hideEditor();
     
-    solver = new Solver(topicNumber, personNumber, roleNumber, sessionNumber);
+    solver = new Solver(topicNumber, personNumber, roleNumber, sessionNumber, algorithm);
     
     // reconfigure the panels
     topicPanel.reconfigure(solver, solver.getTopics().getNames());
