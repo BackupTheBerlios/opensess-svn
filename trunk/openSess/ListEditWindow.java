@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.text.ParseException;
+import java.util.Vector;
 
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -71,7 +72,8 @@ public class ListEditWindow
   private JTextField    nameField;
   private Solver        solver;
   private ChangeMonitor changeMonitor;
-
+  private Vector        nameChangeListeners;
+  
   /**
    * Construct a ListEditWindow that is a child of the given JFrame and
    * has the given title.
@@ -84,7 +86,8 @@ public class ListEditWindow
   public ListEditWindow(JFrame frame, String title)
   {
     super(frame, title, false);
-
+    nameChangeListeners = new Vector();
+    
     JPanel rootPanel = new JPanel();
     getContentPane().add(rootPanel);
     rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.PAGE_AXIS));
@@ -174,6 +177,27 @@ public class ListEditWindow
     setVisible(true);
     nameField.requestFocusInWindow();
     redisplay();
+  }
+
+  /**
+   * Add a NameChangeListener.
+   * 
+   * @param listener the NameChangeListener.
+   */
+  public void addNameChangeListener(NameChangeListener listener)
+  {
+    nameChangeListeners.add(listener);
+  }
+  
+  /**
+   * Derived classes can redefine this method if they are interested
+   * in NameChange events. The default implementation returns null.
+   * 
+   * @return a NameChangeListener.
+   */
+  public NameChangeListener getNameChangeListener()
+  {
+    return null;
   }
   
   /**
@@ -293,11 +317,20 @@ public class ListEditWindow
     else
     {
       SharedDataComboBoxModel model = (SharedDataComboBoxModel) list.getModel();
-      model.setElementAt(nameField.getText(), index);
-      list.setSelectedIndex(index);
-      additionalActionOnNameChange(solver, list.getSelectedIndex(), 
+      String oldName = (String) model.getElementAt(index);
+      
+      if (!name.equals(oldName))
+      { // only do anything when there is a real change
+        model.setElementAt(nameField.getText(), index);
+        list.setSelectedIndex(index);
+        additionalActionOnNameChange(solver, list.getSelectedIndex(), 
                                    nameField.getText());
-      changeMonitor.signalChange();
+        
+        for (int n=0;  n < nameChangeListeners.size();  ++n)
+          ((NameChangeListener)nameChangeListeners.elementAt(n)).nameChanged(index, oldName, name);
+        
+        changeMonitor.signalChange();
+      }
       
       if (advance)
       {

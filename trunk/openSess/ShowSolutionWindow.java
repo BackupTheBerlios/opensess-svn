@@ -18,7 +18,7 @@ import javax.swing.JTabbedPane;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     19.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: ShowSolutionWindow.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -48,6 +48,8 @@ public class ShowSolutionWindow
   private JLabel meanDevValue, maxDevValue, stdDevValue, targetValue;
   private JPanel topicsPanel, rolesPanel;
   private Color  gColor[];
+  private Solver solver;
+  private int    selected;
   
   /**
    * Construct a new ShowSolutionWindow.
@@ -57,6 +59,18 @@ public class ShowSolutionWindow
   ShowSolutionWindow(JFrame frame)
   {
     super(frame, "Show Solution");
+    selected = -1;
+  }
+  
+  /**
+   * Returns a NameChangeListener that will redisplay the window
+   * when any name change is signalled.
+   * 
+   * @return a NameChangeListener.
+   */
+  public NameChangeListener getNameChangeListener()
+  {
+    return new RedisplayOnNameChange(this);
   }
   
   /**
@@ -126,6 +140,9 @@ public class ShowSolutionWindow
   protected void additionalEditSetup(ComboBoxModel model, Solver solver, int selected,
                                      ChangeMonitor changeMonitor)
   {
+    this.solver = solver;
+    this.selected = selected;
+    
     Topics topics = solver.getTopics();
     Persons persons = solver.getPersons();
     int tNumber = topics.getNumber();   // Number of topics
@@ -198,20 +215,6 @@ public class ShowSolutionWindow
         c.gridy = p;
         JLabel label = new JLabel();
         rolesPanel.add(label, c);
-        
-        if (p == 0) // Column headers
-        {
-          if (t > 0)
-            if (t == tNumber+1)
-              label.setText("Dev.");
-            else
-              label.setText(topics.getName(t-1));
-        }
-        else if (t == 0) // Row headers
-        {
-          if (p > 0)
-            label.setText(persons.getName(p-1));
-        }
       }
 
     // add cells to the layout that push it to the upper left
@@ -225,7 +228,7 @@ public class ShowSolutionWindow
     c.weighty = 1.0;
     rolesPanel.add(Box.createVerticalGlue(), c);
 
-    update(solver, selected);
+    update();
   }
   
   /**
@@ -233,15 +236,17 @@ public class ShowSolutionWindow
    */
   protected void additionalChangesOnSelection(Solver solver, int selected)
   {
-    update(solver, selected);
+    this.solver = solver;
+    this.selected = selected;
+    update();
   }
 
   /**
    * Update all solution panels with the currently selected solution.
    */
-  protected void update(Solver solver, int selected)
+  protected void update()
   {
-    if (selected < 0)
+    if (solver == null || selected < 0)
       return;
     
     Solution solution = (Solution) solver.getSolutions().elementAt(selected);
@@ -278,18 +283,50 @@ public class ShowSolutionWindow
     }
     
     // Update role assignments
-    for (int p = 1;  p < pNumber+1;  ++p)
-      for (int t = 1;  t < tNumber+2;  ++t)
+    for (int p = 0;  p < pNumber+1;  ++p)
+      for (int t = 0;  t < tNumber+2;  ++t)
       {
         JLabel label = (JLabel)rolesPanel.getComponent(p*(tNumber+2) + t);
-        
-        if (t < tNumber+1)
+
+        if (p == 0) // Column headers
+        {
+          if (t > 0)
+            if (t == tNumber+1)
+              label.setText("Dev.");
+            else
+              label.setText(topics.getName(t-1));
+        }
+        else if (t == 0) // Row headers
+        {
+          if (p > 0)
+            label.setText(persons.getName(p-1));
+        }
+        else if (t < tNumber+1)  // Role fields
         {
           label.setText(roles.getNameExtended(solution.getRole(p-1, t-1)));
           label.setForeground(gColor[solution.topicToGroup(t-1)]);
         }
-        else
+        else  // deviation sums
           label.setText("" + solution.getPersonSum(p-1));
       }
   }
+  
+  
+  private class RedisplayOnNameChange
+    implements NameChangeListener
+  {
+    private ShowSolutionWindow window;
+    
+    RedisplayOnNameChange(ShowSolutionWindow window)
+    {
+      this.window = window;
+    }
+    
+    public void nameChanged(int index, String oldName, String newName)
+    {
+      System.out.println("Solution update on name change " + oldName + " -> " + newName);
+      window.update();
+    }
+  }
+
 }

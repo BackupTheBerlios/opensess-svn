@@ -32,7 +32,7 @@ import org.xml.sax.SAXException;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     2005-02-12
- * Revision ID: $Id$
+ * Revision ID: $Id: MainWindow.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -288,6 +288,12 @@ public class MainWindow
     solutionPanel = new SolutionPanel(frame, solver, this);
     rc.weighty = 0.0;
     rootPanel.add(solutionPanel, rc);
+    
+    // Make sure that the solution panel gets informed about all name changes.
+    NameChangeListener listener = solutionPanel.getNameChangeListener();
+    personPanel.addNameChangeListener(listener);
+    topicPanel.addNameChangeListener(listener);
+    rolePanel.addNameChangeListener(listener);
   }
   
   /**
@@ -349,8 +355,8 @@ public class MainWindow
       getHelpWindow().setVisible(true);
     else if (command.equals("about"))
     {
-      String date     = getSubversionString("$LastChangedDate$");
-      String revision = getSubversionString("$LastChangedRevision$");
+      String date     = getSubversionString("$LastChangedDate: 2005-03-04 18:45:41Z $");
+      String revision = getSubversionString("$LastChangedRevision: 10 $");
       
       JOptionPane.showMessageDialog(frame,
                                     programName + "\n\n"	

@@ -17,7 +17,7 @@ import javax.swing.border.TitledBorder;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     27.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: BorderedListPanel.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -97,6 +97,26 @@ public class BorderedListPanel
     editWindow.setVisible(false);
   }
 
+  /**
+   * Add a NameChangeListener to the panel's ListEditWindow.
+   * 
+   * @param listener the NameChangeListener.
+   */
+  public void addNameChangeListener(NameChangeListener listener)
+  {
+    editWindow.addNameChangeListener(listener);
+  }
+  
+  /**
+   * Return the ListEditWindow's NameChangeListener.
+   * 
+   * @return the NameChangeListener.
+   */
+  public NameChangeListener getNameChangeListener()
+  {
+    return editWindow.getNameChangeListener();
+  }
+  
   /**
    * Return the Solver object.
    * 
