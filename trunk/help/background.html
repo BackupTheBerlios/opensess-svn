@@ -1,0 +1,125 @@
+<html>
+  <body>
+    <h1>Background</h1>
+
+    <p>OpenSess is used to organize discussions when there are various
+      topic, and the participants have varying preferences for the 
+      individual topics.
+    </p>
+
+    <p>Imagine a group of people that meets to exchange and generate ideas,
+      discuss them, and maybe even make one or two decisions about them.
+      There is probably a single common reason for the meeting, but it
+      might make sense to break down this "root topic" into individual
+      "sub topics" and discuss them separately. There is no reason for
+      everyone to attend all discussions and in particular, nobody wants
+      to attend a discussion that he or she is not at all interested in.
+      This results in smaller groups that can work more efficiently
+      compared to discussion everything in the big group.
+      If some of the discussions could take place in parallel, it might
+      speed up the entire discussion (and maybe decision) process 
+      considerably.
+    </p>
+
+    <p>This leaves us with the big question: Which topics should be
+      discussed in parallel and how should people distribute themselves
+      between the discussion sessions?
+    </p>
+
+    <p>This question has been asked before and there have been several
+      attempts to answer them. The suggested strategies range from
+      almost complete freedom (for example the OpenSpace method
+      described at www.openspaceworld.org) to very rigid organisational
+      schemes that work only for certain numbers of people and topics
+      (for example the Syntegrity method described at www.syntegrity.com).
+    </p>
+
+    <p>OpenSess tends towards the more strongly structured methods in that
+      it attempts to find nearly optimal topic clusterings and participant
+      distributions. However, it has only a few rules regarding the
+      numbers of participants and topics and it incorporates the 
+      preferences that participants have for certain topics.
+      In particular, the OpenSess method depends on the following 
+      concepts and constraints:
+    </p>
+    
+    <ul>
+      <li>
+        <p>The number of <em>sessions</em> that can take place in parallel.
+          This will usually be determined by some "real world constraint"
+          like the number of available rooms.
+        </p>
+      </li>
+      <li>
+        <p>The number of <em>participants</em> that attend the meeting.
+          The number of participants must be divisible by the number of
+          sessions.
+        </p>
+      </li>
+      <li>
+        <p>The number of <em>topics</em> that are to be discussed in the
+          individual sessions. This number is related to the number of
+          <em>rounds</em> that are neccessary to discuss all topics
+          when each round is a set of parallel sessions. In other words,
+          you can either fix the number of rounds which means that you will 
+          have <em>rounds*sessions</em> topics, or you can start with
+          a fixed number of topics, which means that you will have
+          <em>topics/sessions</em> rounds.
+        </p>
+      </li>
+      <li>
+        <p>The number of <em>roles</em> that participants can have in a session.
+          Typical roles are "moderator", "critic" or "observer".
+          the algorithm currently used by OpenSess demands that both the
+          number of participants and the number of topics must also be
+          divisible by the number of roles, but later versions of OpenSess
+          will probably lift that constraint.
+          OpenSess currently allocates an equal number of participants to
+          each role so you will have as many moderators as critics and 
+          observers. This might also change in a later release of OpenSess.
+        </p>
+      </li>
+    </ul>
+
+    <p>The roles are maintained in a list in which the roles are sorted
+      by "strength" or "importance", so that there is a "strongest role"
+      and a "weakest role".
+    </p>
+
+    <p>Each participant also has a <em>preference list</em> which contains
+      every topic exactly once. The first topic in the list is the most
+      important topic for the participant and the last topic is the topic
+      of least interest. OpenSess will try to find configurations in which
+      participants can attend the sessions that are most interesting for them
+      and it will also try to give them the "strongest" role available.
+      In fact, solutions will be judged by how well the interests of the
+      participants are met.
+    </p>
+
+    <p>Each <em>solution</em> produced by OpenSess will consist of the following:
+    </p>
+
+    <ul>
+      <li>
+        <p>The clustering of topics into rounds of sessions.
+        </p>
+      </li>
+      <li>
+        <p>The assignment of participants to sessions and the roles
+          that they have in each session.
+        </p>
+      </li>
+      <li>
+        <p>Several statistical values that evaluate how well the solution
+          meets the interests of the participants.
+        </p>
+      </li>
+    </ul>
+
+    <p>Currently OpenSess produces an arbitrary number of solutions and
+      it is the user's task to choose the one he or she considers best.
+      Later versions of OpenSess will try to better support the user
+      in this task.
+    </p>
+ </body>
+</html>
