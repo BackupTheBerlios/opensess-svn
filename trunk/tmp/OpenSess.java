@@ -3,7 +3,7 @@ package openSess;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     2005-02-12
- * Revision ID: $Id: OpenSess.java 43 2005-02-25 09:01:08Z andreas $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 

@@ -9,7 +9,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id: Persons.java 48 2005-03-01 11:12:27Z awi $
+ * Revision ID: $Id$
  * 
  * 2005-02-22/GS: Algorithm bug fixes
  * 

@@ -11,7 +11,7 @@ import javax.swing.DefaultListModel;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id: Topics.java 20 2005-02-13 13:08:32Z awi $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 

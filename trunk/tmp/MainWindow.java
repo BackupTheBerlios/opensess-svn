@@ -32,7 +32,7 @@ import org.xml.sax.SAXException;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     2005-02-12
- * Revision ID: $Id: MainWindow.java 49 2005-03-01 13:29:32Z awi $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -349,8 +349,8 @@ public class MainWindow
       getHelpWindow().setVisible(true);
     else if (command.equals("about"))
     {
-      String date     = getSubversionString("$LastChangedDate: 2005-03-01 14:29:32 +0100 (Di, 01 Mrz 2005) $");
-      String revision = getSubversionString("$LastChangedRevision: 1 $");
+      String date     = getSubversionString("$LastChangedDate$");
+      String revision = getSubversionString("$LastChangedRevision$");
       
       JOptionPane.showMessageDialog(frame,
                                     programName + "\n\n"	

@@ -8,7 +8,7 @@ import java.util.Random;
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id: PTAlloc.java 49 2005-03-01 13:29:32Z awi $
+ * Revision ID: $Id$
  * 
  * 2005-02-14/AW: Changes to decrease excessive memory allocation/deallocation.
  * 2005-02-22/GS: Algorithm bug fixes 

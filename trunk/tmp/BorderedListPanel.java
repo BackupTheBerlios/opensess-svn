@@ -17,7 +17,7 @@ import javax.swing.border.TitledBorder;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     27.02.2005
- * Revision ID: $Id: BorderedListPanel.java 48 2005-03-01 11:12:27Z awi $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 

@@ -1,12 +1,12 @@
 package openSess;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /*
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     27.02.2005
- * Revision ID: $Id: CloseListener.java 48 2005-03-01 11:12:27Z awi $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -25,37 +25,36 @@ import java.awt.event.WindowEvent;
  */
 
 /**
- * CloseListener is a specialized WindowAdapter
- * that recognizes attempts from the outside
- * to close the window (e.g. via the system menu).
+ * DoubleClickListener is a specialized MouseAdapter
+ * that determines whether a component has been double-clicked.
  * When that happens, a CommandProcessor is called with the 
  * command provided in the constructor.
  *  
  * @author andreas
  */
-public class CloseListener
-extends WindowAdapter
+public class DoubleClickListener
+extends MouseAdapter
 {
   private String           command;
   private CommandProcessor processor;
-  
   /**
-   * Constructs a new CloseListener.
+   * Constructs a new DoubleClickListener.
    * 
-   * @param command the command to process when the window is closed.
+   * @param command the command to process when an item is double-clicked.
    * @param processor the CommandProcessor to process the command.
    */
-  public CloseListener(String command, CommandProcessor processor)
+  public DoubleClickListener(String command, CommandProcessor processor)
   {
     this.command   = command;
     this.processor = processor;
   }
   
   /**
-   * Process the ActionCommand when the window is closed.
+   * Check the event and process the ActionCommand on double-click.
    */
-  public void windowClosing(WindowEvent e)
+  public void mouseClicked(MouseEvent e) 
   {
-    processor.processCommand(command);
+    if (e.getClickCount() == 2) 
+      processor.processCommand(command);
   }
 }

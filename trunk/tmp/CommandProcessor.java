@@ -1,11 +1,9 @@
 package openSess;
-import javax.swing.JFrame;
-
 /*
  * Copyright 2005 Andreas Wickner
  * 
- * Created:     17.02.2005
- * Revision ID: $Id: EditRoleWindow.java 48 2005-03-01 11:12:27Z awi $
+ * Created:     27.02.2005
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -24,20 +22,15 @@ import javax.swing.JFrame;
  */
 
 /**
- * The window for editing role names is simply a ListEditWindow.
- * 
+ * A simple interface for objects that accept string commands.
  * @author andreas
  */
-public class EditRoleWindow
-  extends ListEditWindow
+public interface CommandProcessor
 {
   /**
-   * Constructs an EditRoleWindow.
+   * Execute the command specified as the parameter.
    * 
-   * @param frame
+   * @param command the command.
    */
-  public EditRoleWindow(JFrame frame)
-  {
-    super(frame, "Edit Role");
-  }
+  public void processCommand(String command);
 }

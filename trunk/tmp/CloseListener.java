@@ -1,12 +1,12 @@
 package openSess;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 /*
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     27.02.2005
- * Revision ID: $Id: EnterListener.java 48 2005-03-01 11:12:27Z awi $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -25,37 +25,37 @@ import java.awt.event.KeyEvent;
  */
 
 /**
- * EnterListener is a specialized KeyAdapter
- * that determines whether the ENTER key has been pressed
- * on a component.
+ * CloseListener is a specialized WindowAdapter
+ * that recognizes attempts from the outside
+ * to close the window (e.g. via the system menu).
  * When that happens, a CommandProcessor is called with the 
  * command provided in the constructor.
  *  
  * @author andreas
  */
-public class EnterListener
-extends KeyAdapter
+public class CloseListener
+extends WindowAdapter
 {
   private String           command;
   private CommandProcessor processor;
+  
   /**
-   * Constructs a new EnterListener.
+   * Constructs a new CloseListener.
    * 
-   * @param command the command to process when ENTER is pressed.
+   * @param command the command to process when the window is closed.
    * @param processor the CommandProcessor to process the command.
    */
-  public EnterListener(String command, CommandProcessor processor)
+  public CloseListener(String command, CommandProcessor processor)
   {
     this.command   = command;
     this.processor = processor;
   }
-
+  
   /**
-   * Check the event and process the ActionCommand on ENTER.
+   * Process the ActionCommand when the window is closed.
    */
-  public void keyPressed(KeyEvent e) 
+  public void windowClosing(WindowEvent e)
   {
-    if (e.getKeyCode() == KeyEvent.VK_ENTER) 
-      processor.processCommand(command);
+    processor.processCommand(command);
   }
 }
