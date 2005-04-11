@@ -194,13 +194,14 @@ public class Persons
         pref[p][k] = tmp;
       }
     }
-    createPrefInx();
+    
+    createPreferenceIndex();
   }
 
   /**
    * Create an inverted preference list containing the the rank of each topic.
    */
-  protected void createPrefInx()
+  public void createPreferenceIndex()
   {
     int dimPersons = solver.getPersons().getNumber();
     int dimTopics  = solver.getTopics().getNumber();

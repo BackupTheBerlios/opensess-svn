@@ -62,7 +62,8 @@ extends TaskMonitor
   private DefaultListModel solutionNames;
   private int              dimTryTopicClustering;
   private int              dimTryPersonAssignment;
-  private int              dimTryAlloc;
+  private int              tries;
+  private int              keepBest;
   private boolean          debug;
   private Solution         solution;
   private int              bestAssignment[][];
@@ -92,7 +93,7 @@ extends TaskMonitor
 
     topics        = new Topics(this, dimTopics);
     persons       = new Persons(this, dimPersons, dimTopics);
-    roles         = new Roles(this, dimRoles);
+    roles         = new Roles(dimRoles, dimPersons, dimSessions);
     solutions     = new Vector();
     solutionNames = new DefaultListModel();
   }
@@ -169,14 +170,53 @@ extends TaskMonitor
   }
   
   /**
+   * Set the number of best solutions to keep in the list.
+   * 
+   * @param keepBest the number of best solutions to keep in the list.
+   */
+  public void setKeepBest(int keepBest)
+  {
+    this.keepBest = keepBest;
+  }
+  
+  /**
    * Add a solution to the list of solutions.
    * 
    * @param solution
    */
   public void addSolution(Solution solution)
   {
-    solutions.addElement(solution);
-    solutionNames.addElement(solution.getName());
+    
+    // Find the right place to insert the new solution into the sorted list
+    int position = -1;
+    int size = solutions.size();
+    
+    for (int i = 0;  position < 0 && i < size;  ++i)
+     if (solution.greaterThan((Solution)solutions.elementAt(i)))
+       position = i;
+      
+    if (position < 0)
+    {
+      // append at end if required size not yet reached
+      if (size < keepBest)
+      {
+        solutions.addElement(solution);
+        solutionNames.addElement(solution.getName());
+      }
+    }
+    else
+    {
+      // insert at position
+      solutions.insertElementAt(solution, position);
+      solutionNames.insertElementAt(solution.getName(), position);
+
+      // Prune list to required size
+      if (solutions.size() > keepBest)
+      {
+        solutions.removeElementAt(keepBest);
+        solutionNames.removeElementAt(keepBest);
+      }
+    }
   }
   
   /**
@@ -185,16 +225,19 @@ extends TaskMonitor
    * 
    * @param dimTryTopicClustering  the number of topic clusterings to try.
    * @param dimTryPersonAssignment the number of topic/person assignments to try.
-   * @param dimTryAlloc            the maximum number of assignments to try.
+   * @param tries                  the maximum number of person assignment attempts.
+   * @param keepBest               the number of best solutions to keep in the list.
    */
   public void startSolverTask(int dimTryTopicClustering, 
                              int dimTryPersonAssignment,
-                             int dimTryAlloc)
+                             int tries,
+                             int keepBest)
   {
     final Solver theSolverItself = this;
-    this.dimTryTopicClustering = dimTryTopicClustering;
-    this.dimTryPersonAssignment = dimTryPersonAssignment;
-    this.dimTryAlloc = dimTryAlloc;
+    this.dimTryTopicClustering   = dimTryTopicClustering;
+    this.dimTryPersonAssignment  = dimTryPersonAssignment;
+    this.tries                   = tries;
+    this.keepBest                = keepBest;
     startTask();
   }
   
@@ -207,7 +250,7 @@ extends TaskMonitor
   protected void doTask()
   {
   	// added update of preference index -- GS - 2005-02-22
-    persons.createPrefInx();
+    persons.createPreferenceIndex();
     
 /*    
     System.out.println("\n" + "Die Personen und ihre Präferenzen:");
@@ -268,15 +311,15 @@ extends TaskMonitor
           return;
         
         // first the assignment is done without a specific role
-        assignPersonsToSessions(topicGroup, dimTryAlloc, tryP * 4711 + 8812);
+        assignPersonsToSessions(topicGroup, tryP * 4711 + 8812);
         
         // thereafter the roles are assigned
-        assignRoles();
+        assignRolesAlternative();
 
         // System.out.print(pt);
         
         if (isValidSolution())
-          addSolution(createSolution(solutions.size()));
+          addSolution(createSolution(tryT*dimTryPersonAssignment + tryP));
       }
     }
   }
@@ -345,7 +388,7 @@ extends TaskMonitor
    * @param tries   the maximum number of tries.
    * @param seed    the seed for the random number generator.
    */
-  public void assignPersonsToSessions(int[] groups, int tries, long seed)
+  public void assignPersonsToSessions(int[] groups, long seed)
   {
     int     dimPersons     = persons.getNumber();
     int     dimTopics      = topics.getNumber();
@@ -644,7 +687,125 @@ extends TaskMonitor
 		// System.out.println (noStep + " steps performed.");
   }
 
- 
+  /**
+   * An alternative role assignment algorithm
+   *
+   */
+  public void assignRolesAlternative()
+  {
+    int dimRoles       = getRoles().getNumber();
+    int unassignedRole = dimRoles + 1; // Marker for an unassigned role
+    Random rand = new Random();
+    debug = false;
+    
+    if (debug)
+      System.out.println("Using role shuffling on initial matrix:\n" + solution.debugString());
+
+    // Determine the number of required roles per session (with minimum occurence)
+    int requiredRoles = 0;
+    
+    for (int r=0;  r < roles.getNumber();  ++r)
+      requiredRoles += roles.getMinimumPerSession(r);
+      
+    if (debug)
+    	System.out.println(requiredRoles + " roles are required per session.");
+
+    // Build a pool of possible roles to choose from for non-required roles.
+    Vector rolePool = new Vector();
+    
+    for (int r=0;  r < roles.getNumber();  ++r)
+    {
+      int optional = roles.getMaximumPerSession(r) - roles.getMinimumPerSession(r);
+      
+      for (int i=0;  i < optional;  ++i)
+      	rolePool.add(new Integer(r));
+    }
+
+    if (debug)
+    	System.out.println("For each session, there are " + rolePool.size() + " roles in the pool of optional roles.");
+    
+    // First, we go through each session and assign the roles with a minimum occurence
+    for (int t=0;  t < topics.getNumber();  ++t)
+      for (int r=0;  r < roles.getNumber();  ++r)
+        for (int n=0;  n < roles.getMinimumPerSession(r);  ++n)
+          solution.setRole(chooseMostInterestedPerson(t), t, r+1);
+
+    if (debug)
+    	System.out.println("\nAfter assigning the required roles:\n" + solution.debugString());
+    
+    // Now, we distribute the optional roles for each session
+    for (int t=0;  t < topics.getNumber();  ++t)
+    {
+      // Make a copy of the complete rolePool
+      Vector pool = (Vector) rolePool.clone();
+      
+      // Count the unassigned persons in this session
+      // (this is done to enable this algorithm to cope with a varying 
+      // number of participants per session).
+      int unassigned = 0;
+      
+      for (int p=0;  p < persons.getNumber();  ++p)
+        if (solution.getRole(p, t) == unassignedRole)
+          ++unassigned;
+        
+      // Randomly remove roles from the pool until we have the right number
+      while (pool.size() > unassigned)
+      {
+        int index = rand.nextInt(pool.size());
+        pool.remove(index);
+      }
+
+      if (pool.size() != unassigned)
+        System.out.println("CANNOT HAPPEN: pool size wrong.");
+      
+      // Assign the remaining roles in the pool
+      while (pool.size() > 0)  
+      {
+        int index = rand.nextInt(pool.size());
+        int r     = ((Integer)pool.elementAt(index)).intValue();
+        pool.remove(index);
+        solution.setRole(chooseMostInterestedPerson(t), t, r+1);
+      }
+    }
+    
+    if (debug)
+    	System.out.println("\nAfter assigning the other roles:\n" + solution.debugString());
+    
+    solved = true;
+    debug = false;
+  }
+  
+  /**
+   * Of all the participants in the session for topic t that have
+   * not yet been assigned a role, return the one with the highest 
+   * interest.
+   * 
+   * @param t the topic of the session.
+   * @return the most interested unassigned pearticipant.
+   */
+  protected int chooseMostInterestedPerson(int t)
+  {
+    // Of all the unassigned persons in this session,
+    // pick the one with the highest interest.
+    int dimRoles       = getRoles().getNumber();
+    int unassignedRole = dimRoles + 1; // Marker for an unassigned role
+    int bestPerson = -1;
+    int interest = 99999;
+    
+    for (int p=0;  p < persons.getNumber();  ++p)
+      if (solution.getRole(p, t) == unassignedRole)
+        if (persons.getPreferenceIndex(p, t) < interest)
+        {
+        	bestPerson = p;
+        	interest   = persons.getPreferenceIndex(p, t);
+        }
+        
+    if (bestPerson < 0)
+      System.out.println("CANNOT HAPPEN: no person left to choose.");
+        
+    return bestPerson;
+  }
+
   /**
    * Create a Solution object from the current solution.
    * 
@@ -662,9 +823,9 @@ extends TaskMonitor
     
     StringBuffer name = new StringBuffer("Solution " + (index+1));
     name.append(": ");
-    name.append(compactFormat.format(solution.getMeanDeviation()));
+    name.append(compactFormat.format(solution.getMeanSatisfaction()));
     name.append(" - ");
-    name.append(compactFormat.format(solution.getMaximumDeviation()));
+    name.append(compactFormat.format(solution.getMinimumSatisfaction()));
     name.append(" - ");
     name.append(compactFormat.format(solution.getStandardDeviation()));
     solution.setName(name.toString());

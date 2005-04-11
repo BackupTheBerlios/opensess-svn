@@ -7,7 +7,7 @@ import javax.swing.event.ListDataListener;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     17.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: SharedDataComboBoxModel.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -62,7 +62,7 @@ public class SharedDataComboBoxModel
    */
   public Object getElementAt(int index)
   {
-    return data.getElementAt(index);
+    return (index >= data.size()) ? null : data.getElementAt(index);
   }
   
   /**

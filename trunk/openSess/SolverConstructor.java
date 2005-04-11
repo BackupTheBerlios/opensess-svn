@@ -96,11 +96,19 @@ public class SolverConstructor
     else if (qName.equals("preferredTopic"))
       solver.getPersons().setPreference(person, ++topic, getInt(attributes, "index", 0));
     else if (qName.equals("solutionParameters"))
-      main.setSolutionParameters(getInt(attributes, "topicClusters", 5),
+    {
+      int keepBest = getInt(attributes, "keepBest", 10);
+      solver.setKeepBest(keepBest);
+      main.setSolutionParameters(getInt(attributes, "topicClusters",     5),
                                  getInt(attributes, "personAssignments", 5),
-                                 getInt(attributes, "attempts", 100000));
+                                 getInt(attributes, "attempts",          100000),
+                                 keepBest);
+    }
     else if (qName.equals("solutions"))
+    {
       solution = 0;
+      solver.getPersons().createPreferenceIndex();
+    }
     else if (qName.equals("solution"))
     {
       currentSolution = new Solution(solver);
@@ -133,7 +141,16 @@ public class SolverConstructor
     else if (qName.equals("personSums"))
       person = -1;
     else if (qName.equals("personSum"))
-      currentSolution.setPersonSum(++person, getInt(attributes, "sum", 0));
+      currentSolution.setPersonSum(++person, getDouble(attributes, "sum", 0));
+  }
+  /**
+   * Gets called by the SAX implementation when the end of an XML tag
+   * is recognized. 
+   */
+  public void endElement(String uri, String localName, String qName) 
+  {
+    if (qName.equals("solution"))
+      currentSolution.evaluate();
   }
   
   /**

@@ -45,7 +45,7 @@ import javax.swing.JTabbedPane;
 public class ShowSolutionWindow
   extends ListEditWindow
 {
-  private JLabel meanDevValue, maxDevValue, stdDevValue, targetValue;
+  private JLabel meanSatValue, minSatValue, stdDevValue, targetValue;
   private JPanel topicsPanel, rolesPanel;
   private Color  gColor[];
   private Solver solver;
@@ -99,8 +99,8 @@ public class ShowSolutionWindow
     tabPanel.add("Role Assignment", rolesScrollPanel);
     
     // Set up Statistics
-    meanDevValue        = new JLabel();
-    maxDevValue         = new JLabel();
+    meanSatValue        = new JLabel();
+    minSatValue         = new JLabel();
     stdDevValue         = new JLabel();
     targetValue         = new JLabel();
    
@@ -116,12 +116,12 @@ public class ShowSolutionWindow
     vc.weightx = 1.0;
     vc.weighty = 0.0;
     
-    statPanel.add(new JLabel("Mean Deviation:"), lc);
+    statPanel.add(new JLabel("Mean Satisfaction:"), lc);
     vc.gridy = 0;
-    statPanel.add(meanDevValue, vc);
-    statPanel.add(new JLabel("Maximum Deviation:"), lc);
+    statPanel.add(meanSatValue, vc);
+    statPanel.add(new JLabel("Minimum Satisfaction:"), lc);
     vc.gridy = 1;
-    statPanel.add(maxDevValue, vc);
+    statPanel.add(minSatValue, vc);
     statPanel.add(new JLabel("Standard Deviation:"), lc);
     vc.gridy = 2;
     statPanel.add(stdDevValue, vc);
@@ -262,8 +262,8 @@ public class ShowSolutionWindow
     //                   + ", s" + sNumber + ", g" + gNumber);
         
     // Update statistics
-    meanDevValue.setText("" + solution.getMeanDeviation());
-    maxDevValue.setText("" + solution.getMaximumDeviation());
+    meanSatValue.setText("" + solution.getMeanSatisfaction());
+    minSatValue.setText("" + solution.getMinimumSatisfaction());
     stdDevValue.setText("" + solution.getStandardDeviation());
     targetValue.setText("" + solution.getTargetValue());
 
@@ -292,7 +292,7 @@ public class ShowSolutionWindow
         {
           if (t > 0)
             if (t == tNumber+1)
-              label.setText("Dev.");
+              label.setText("Sat.");
             else
               label.setText(topics.getName(t-1));
         }
@@ -306,8 +306,8 @@ public class ShowSolutionWindow
           label.setText(roles.getNameExtended(solution.getRole(p-1, t-1)));
           label.setForeground(gColor[solution.topicToGroup(t-1)]);
         }
-        else  // deviation sums
-          label.setText("" + solution.getPersonSum(p-1));
+        else  // satisfaction value
+          label.setText("" + solution.getPersonSatisfaction(p-1));
       }
   }
   

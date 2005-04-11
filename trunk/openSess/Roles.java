@@ -55,9 +55,11 @@ public class Roles
   /**
    * Constructs a new Roles object from information in the Solver object.
    * 
-   * @param solver the Solver object containing configuration information.
+   * @param dimRoles    the number of roles.
+   * @param dimPersons  the number of persons.
+   * @param dimSessions the number of sessions.
    */
-  public Roles(Solver solver, int dimRoles)
+  public Roles(int dimRoles, int dimPersons, int dimSessions)
   {
     names = new DefaultListModel();
     minPerSession = new int[dimRoles];
@@ -66,10 +68,8 @@ public class Roles
     for (int role = 0;  role < dimRoles;  ++role)
     {
       names.addElement("Role " + (role+1));
-      minPerSession[role] = solver.getPersons().getNumber() 
-      											/ solver.getSessionNumber()
-                            / dimRoles;
-      maxPerSession[role] = minPerSession[role];
+      minPerSession[role] = dimPersons / dimSessions / dimRoles;
+      maxPerSession[role] = (int)(0.9 + ((double)dimPersons) / dimSessions / dimRoles);
     }
     
     if (getNumber() > 0)

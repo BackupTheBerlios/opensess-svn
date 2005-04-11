@@ -159,8 +159,8 @@ public class GlobalNewWindow
       int roles    = getNumberOfRoles();
       int sessions = getNumberOfSessions();
       
-      boolean topicsOk = (topics % (roles*sessions)) == 0;
-      boolean personsOk = (persons % (roles*sessions)) == 0;
+      boolean topicsOk = (topics % sessions) == 0;
+      boolean personsOk = (persons % sessions) == 0;
       
       if (topicsOk && personsOk)
       {
@@ -173,11 +173,11 @@ public class GlobalNewWindow
         
         if (!topicsOk)
           msg.append("- The number of topics must be divisible by\n"
-                     +	"  (numberOfRoles * numberOfSessions)\n");
+                     +	"  the number of sessions\n");
         
         if (!personsOk)
           msg.append("- The number of persons must be divisible by\n"
-                     +	"  (numberOfRoles * numberOfSessions)\n");
+                     +	"  the number of sessions\n");
         
         JOptionPane.showMessageDialog(this, msg, "Constraint Violation", JOptionPane.ERROR_MESSAGE); 
       }

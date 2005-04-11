@@ -23,7 +23,7 @@ import javax.swing.Timer;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     27.02.2005
- * Revision ID: $Id$
+ * Revision ID: $Id: SolutionPanel.java 10 2005-03-04 18:45:41Z awickner $
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -55,7 +55,8 @@ public class SolutionPanel
   implements ActionListener
 {
   private JFrame              frame;
-  private JFormattedTextField topicClustersField, personAssignmentsField, attemptsField;
+  private JFormattedTextField topicClustersField, personAssignmentsField, 
+                              keepBestField, attemptsField;
   private JButton             solveButton;
   private ProgressMonitor     monitor;
   private Timer               timer;
@@ -100,7 +101,8 @@ public class SolutionPanel
     NumberFormat intFormat = NumberFormat.getIntegerInstance();
     JLabel topicClustersLabel     = new JLabel("Topic Clustering Attempts:");
     JLabel personAssignmentsLabel = new JLabel("Person Assignment Attempts:");
-    JLabel attemptsLabel          = new JLabel("Assignments Attempts:");
+    JLabel attemptsLabel          = new JLabel("Maximum Assignment Attempts:");
+    JLabel keepBestLabel          = new JLabel("Keep Best Solutions:");
     topicClustersField = new JFormattedTextField();
     topicClustersField.setValue(new Integer(5));
     topicClustersField.setColumns(4);
@@ -110,6 +112,9 @@ public class SolutionPanel
     attemptsField = new JFormattedTextField();
     attemptsField.setValue(new Integer(100000));
     attemptsField.setColumns(8);
+    keepBestField = new JFormattedTextField();
+    keepBestField.setValue(new Integer(10));
+    keepBestField.setColumns(4);
     
     JPanel valuePanel = new JPanel();
     valuePanel.setLayout(new BoxLayout(valuePanel, BoxLayout.LINE_AXIS));
@@ -121,6 +126,7 @@ public class SolutionPanel
     labelPanel.add(topicClustersLabel);
     labelPanel.add(personAssignmentsLabel);
     labelPanel.add(attemptsLabel);
+    labelPanel.add(keepBestLabel);
     valuePanel.add(Box.createRigidArea(new Dimension(10, 0)));
     
     JPanel fieldPanel = new JPanel(new GridLayout(0,1));
@@ -128,6 +134,7 @@ public class SolutionPanel
     fieldPanel.add(topicClustersField);
     fieldPanel.add(personAssignmentsField);
     fieldPanel.add(attemptsField);
+    fieldPanel.add(keepBestField);
     
     solveButton = new JButton("Solve");
     solveButton.setActionCommand("solve");
@@ -149,14 +156,15 @@ public class SolutionPanel
    * 
    * @param topicClusters     the number of topic clusterings to try.
    * @param personAssignments the number of person assignments to try.
-   * @param attempts          the maximum number of assignment attempts.
+   * @param keepBest          the number of best solutions to keep in the list.
    */
   public void setSolutionParameters(int topicClusters, int personAssignments,
-                                    int attempts)
+                                    int attempts, int keepBest)
   {
     topicClustersField.setValue(new Integer(topicClusters));
     personAssignmentsField.setValue(new Integer(personAssignments));
     attemptsField.setValue(new Integer(attempts));
+    keepBestField.setValue(new Integer(keepBest));
   }
 
   /**
@@ -178,12 +186,21 @@ public class SolutionPanel
   }
 
   /**
-   * Return the number of assignment attempts.
+   * Return the maximum number of person assignments.
    * @return the number of assignment attempts.
    */
   public int getAttempts()
   {
     return getIntFromField(attemptsField);
+  }
+
+  /**
+   * Return the number of best solutions to keep in the list.
+   * @return the number of assignment attempts.
+   */
+  public int getKeepBest()
+  {
+    return getIntFromField(keepBestField);
   }
   
   /**
@@ -216,13 +233,14 @@ public class SolutionPanel
       int topicClusters     = getTopicClusters();
       int personAssignments = getPersonAssignments();
       int attempts          = getAttempts();
+      int keepBest          = getKeepBest();
       
       monitor = new ProgressMonitor(frame, "Calculating Solutions...", "", 0,
                                     topicClusters * personAssignments);
       monitor.setProgress(0);
       monitor.setMillisToDecideToPopup(0);
       solveButton.setEnabled(false);
-      getSolver().startSolverTask(topicClusters, personAssignments, attempts);
+      getSolver().startSolverTask(topicClusters, personAssignments, attempts, keepBest);
       timer.start();
       getChangeMonitor().signalChange();
     }

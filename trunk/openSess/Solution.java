@@ -36,8 +36,8 @@ public class Solution
   private String name;
   private int    group[][];
   private int    role[][];
-  private int    personSum[];
-  private double meanDeviation, maxDeviation, stdDeviation;
+  private double personSat[];
+  private double meanSatisfaction, minSatisfaction, stdDeviation;
   private int    targetValue;
   private int    groupNumber;
   private int    groupSize;
@@ -57,7 +57,7 @@ public class Solution
     groupSize   = dimSessions;
     group       = new int[groupNumber][groupSize];
     role        = new int[dimPersons][dimTopics];
-    personSum   = new int[dimPersons];
+    personSat   = new double[dimPersons];
   }
 
   /**
@@ -147,16 +147,30 @@ public class Solution
   }
   
   /**
-   * Return the sum of deviations for a specified person.
+   * Return the satisfaction value for a specified person.
    * 
    * @param person the person.
-   * @return the sum of deviations.
+   * @return the satisfaction value.
    */
-  public int getPersonSum(int person)
+  public double getPersonSatisfaction(int person)
   {
-    return personSum[person];
+    return personSat[person];
   }
 	
+  public boolean greaterThan(Solution other)
+  {
+    if (this == other)
+      return false;  // identical
+    
+    if (this.getMeanSatisfaction() > other.getMeanSatisfaction())
+      return true;
+    else if (this.getMeanSatisfaction() < other.getMeanSatisfaction())
+      return false;
+    
+    // same mean deviation, compare max deviation
+    return this.getMinimumSatisfaction() > other.getMinimumSatisfaction();
+  }
+  
 	/**
 	 * Calculates the target value of the current assignment.
 	 * 
@@ -180,7 +194,7 @@ public class Solution
 
       val += pval[p];
     }
-    
+
     double mean = (val * 1.0 / dimPersons);
     double dev = 0;
     
@@ -195,23 +209,23 @@ public class Solution
   }
   
   /**
-   * Return the mean deviation of this solution.
+   * Return the mean satisfaction value of this solution.
    * 
-   * @return the mean deviation.
+   * @return the mean satisfaction.
    */
-  public double getMeanDeviation()
+  public double getMeanSatisfaction()
   {
-    return meanDeviation;
+    return meanSatisfaction;
   }
   
   /**
-   * Return the maximum deviation of this solution.
+   * Return the minimum satisfaction value of this solution.
    * 
-   * @return the maximum deviation.
+   * @return the minimum satisfaction.
    */
-  public double getMaximumDeviation()
+  public double getMinimumSatisfaction()
   {
-    return maxDeviation;
+    return minSatisfaction;
   }
   
   /**
@@ -272,9 +286,9 @@ public class Solution
    * @param person the person.
    * @param sum the sum of deviations.
    */
-  public void setPersonSum(int person, int sum)
+  public void setPersonSum(int person, double sum)
   {
-    personSum[person] = sum;
+    personSat[person] = sum;
   }
   
   /**
@@ -282,52 +296,98 @@ public class Solution
    */
   protected void evaluate()
   {
+    calculateTargetValue();
+    
     Persons persons = solver.getPersons();
+    Roles   roles   = solver.getRoles();
     int     dimPersons = persons.getNumber();
     int     dimTopics  = solver.getTopics().getNumber();
+    int     dimRoles   = solver.getRoles().getNumber();
     int     dimSessions = solver.getSessionNumber();
-    float   total = 0;
+    int     personsPerSession = dimPersons / dimSessions;
     int     sumMax = 0;
-    int     pval[] = new int[dimPersons];
-    int     val = 0;
+    boolean debug = false;
     
-    for (int p = 0; p < dimPersons; p++)
+    // Create a vector that holds the maximum achievable roles
+    // in a session, which includes a special role for
+    // non-participation (dimRoles+1).
+    int optRoles[] = new int[dimPersons];
+    int currentRole = 0;
+    int rolesLeft = 0;
+    
+    if (debug)
+      System.out.println("\noptRoles:");
+    
+    for (int p = 0;  p < dimPersons;  ++p)
     {
-      for (int t = 0; t < dimTopics; t++)
-        if (getRole(p, t) > 0)
-          pval[p] += persons.getPreferenceIndex(p, t);
+      if (p >= personsPerSession)
+        optRoles[p] = dimRoles + 1;
+      else
+      {	
+        if (rolesLeft <= 0)
+          // next role: see how many we can use at maximum
+          rolesLeft = roles.getMaximumPerSession(currentRole++);
       
-      val += pval[p];
+        if (rolesLeft-- > 0)
+          optRoles[p] = currentRole;
+      }
+    
+      if (debug)
+        System.out.println(p + ": " + optRoles[p]);
     }
     
-    double mean = ((double)val) / dimPersons;
-    double dev = 0;
+    // Record and sum up the satisfaction values for all participants
+    double sat[][] = new double[dimPersons][dimTopics];
+    double total   = 0;
+    double minSat  = 1.0;
     
-    for (int p = 0;  p < dimPersons;  p++)
-      dev += (mean - pval[p]) * (mean - pval[p]);
-    
-    dev = Math.sqrt(dev / dimPersons);
-         
-    for (int p = 0; p < dimPersons; p++)
+    for (int p = 0;  p < dimPersons;  ++p)
     {
-      int sum = -(dimTopics / dimSessions)
-                * ((dimTopics / dimSessions) - 1) / 2;
+      personSat[p] = 0;
       
-      for (int t = 0; t < dimTopics; t++)
-        if (getRole(p, t) > 0)
-          sum += persons.getPreferenceIndex(p, t); 
+      for (int t = 0;  t < dimTopics;  ++t)
+      {
+        int actualRole = getRole(p, t);
+        
+        if (actualRole == 0)
+          actualRole = dimRoles+1;
+        
+        int optimalRole = optRoles[(persons.getPreferenceIndex(p, t) * dimPersons) 
+                                   / dimTopics];
+        double s = 1.0 - Math.abs(optimalRole - actualRole) / (double)dimRoles;
+        
+        if (debug)
+          System.out.println(p + "," + t + ": act " + actualRole
+                             + "  opt " + optimalRole + "  sat " 
+                             + s);
+        
+        sat[p][t]     = s;
+        personSat[p] += s;
+        total        += s;
+      }
+    
+      personSat[p] /= dimTopics;
       
-      personSum[p] = sum;
+      if (personSat[p] < minSat)
+        minSat = personSat[p];
       
-      total += sum;
-      
-      if (sumMax < sum)
-        sumMax = sum;
+      if (debug)
+        System.out.println("Total satisfaction for P" + p + ": " + personSat[p]);
     }
 
-    meanDeviation = total / dimPersons;
-    maxDeviation  = sumMax;  
-    stdDeviation  = dev;
+    double mean = total / (dimPersons * dimTopics);
+    double dev = 0;
+    
+    for (int p = 0;  p < dimPersons;  ++p)
+      for (int t = 0;  t < dimTopics;  ++t)
+      {
+        double diff = mean - sat[p][t];
+        dev += diff * diff;
+      }
+    
+    meanSatisfaction = mean;
+    minSatisfaction  = minSat;  
+    stdDeviation     = Math.sqrt(dev / (dimPersons * dimTopics));
   }
 
   /**
@@ -339,8 +399,8 @@ public class Solution
                      + getName() + "\">");
 
     Indenter.println(stream, level+1, "<statistics meandev=\""
-                     + getMeanDeviation() + "\" maxdev=\""
-                     + getMaximumDeviation() + "\" stddev=\""
+                     + getMeanSatisfaction() + "\" maxdev=\""
+                     + getMinimumSatisfaction() + "\" stddev=\""
                      + getStandardDeviation() + "\" target=\""
                      + getTargetValue() + "\"/>");
     
@@ -379,11 +439,37 @@ public class Solution
     
     for (int p = 0;  p < solver.getPersons().getNumber();  ++p)
       Indenter.println(stream, level+2, "<personSum sum=\"" 
-                       + getPersonSum(p) + "\"/>");
+                       + getPersonSatisfaction(p) + "\"/>");
     
     Indenter.println(stream, level+1, "</personSums>");
     
     Indenter.println(stream, level, "</solution>");
+  }
+
+  public String debugString()
+  {
+    int     dimPersons = solver.getPersons().getNumber();
+    int     dimTopics  = solver.getTopics().getNumber();
+    StringBuffer s = new StringBuffer();
+   
+    s.append("\n    ");
+    
+    for (int t = 0; t < dimTopics; t++)
+      s.append(" T" + t);
+    
+    s.append("\n");
+    
+    for (int p = 0; p < dimPersons; p++)
+    {
+      s.append("P" + p + ": ");
+
+      for (int t = 0; t < dimTopics; t++)
+        s.append("  " + getRole(p, t));
+      
+      s.append("\n");
+    }
+    
+    return s.toString();
   }
   
   public String toString()
@@ -403,14 +489,14 @@ public class Solution
       for (int t = 0; t < dimTopics; t++)
         s.append(" " + solver.getRoles().getNameExtended(getRole(p, t)));
 
-      String tmp = "       " + personSum[p];
+      String tmp = "       " + personSat[p];
 
       s.append(tmp.substring(tmp.length() - 5) + "\n");
     }
     
     s.append(persons.emptyName() + "   " + topics.toHeaderString(" ") + "\n");
-    s.append("    mittlere Abweichung=" + getMeanDeviation()
-         + "    maximale Abweichung=" + getMaximumDeviation()  
+    s.append("    mittlere Abweichung=" + getMeanSatisfaction()
+         + "    maximale Abweichung=" + getMinimumSatisfaction()  
          + "    Standardabw.=" + getStandardDeviation()
          + "    target=" + calculateTargetValue()
          + "\n\n");

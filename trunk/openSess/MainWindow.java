@@ -145,11 +145,12 @@ public class MainWindow
    * @param topicClusters     the number of topic clusterings to try.
    * @param personAssignments the number of person assignments to try.
    * @param attempts          the maximum number of assignment attempts.
+   * @param keepBest          the number of best solutions to keep in a list.
    */
   public void setSolutionParameters(int topicClusters, int personAssignments,
-                                    int attempts)
+                                    int attempts, int keepBest)
   {
-    solutionPanel.setSolutionParameters(topicClusters, personAssignments, attempts);
+    solutionPanel.setSolutionParameters(topicClusters, personAssignments, attempts, keepBest);
   }
   
   /**
@@ -496,7 +497,8 @@ public class MainWindow
     Indenter.println(stream, level+1, "<solutionParameters topicClusters=\""
                      + solutionPanel.getTopicClusters() + "\" personAssignments=\""
                      + solutionPanel.getPersonAssignments() + "\" attempts=\""
-                     + solutionPanel.getAttempts() + "\"/>");
+                     + solutionPanel.getAttempts() + "\" keepBest=\""
+                     + solutionPanel.getKeepBest() + "\"/>");
     
     Indenter.println(stream, level+1, "<solutions>");
     
