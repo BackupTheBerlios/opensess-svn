@@ -25,21 +25,21 @@ import javax.swing.JFrame;
  */
 
 /**
- * An EditTopicWindow is simply a ListEditWindow.
+ * An GenericEditWindow is simply a ListEditWindow.
  * 
  * @author andreas
  */
-public class EditTopicWindow
+public class GenericEditWindow
   extends ListEditWindow
 {
   /**
-   * Construct a new EditTopicWindow.
+   * Construct a new GenericEditWindow.
    * 
    * @param frame
    */
-  public EditTopicWindow(JFrame frame)
+  public GenericEditWindow(JFrame frame, String title)
   {
-    super(frame, "Edit Topic");
+    super(frame, title);
   }
 }
 

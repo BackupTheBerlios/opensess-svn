@@ -6,7 +6,7 @@ import java.util.Arrays;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     18.02.2005
- * Revision ID: $Id: Solution.java 10 2005-03-04 18:45:41Z awickner $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -162,9 +162,12 @@ public class Solution
     if (this == other)
       return false;  // identical
     
-    if (this.getMeanSatisfaction() > other.getMeanSatisfaction())
+    int thisMean = (int)(this.getMeanSatisfaction() * 1000);
+    int otherMean = (int)(other.getMeanSatisfaction() * 1000);
+    
+    if (thisMean > otherMean)
       return true;
-    else if (this.getMeanSatisfaction() < other.getMeanSatisfaction())
+    else if (thisMean < otherMean)
       return false;
     
     // same mean deviation, compare max deviation

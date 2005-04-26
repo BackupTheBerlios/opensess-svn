@@ -32,7 +32,7 @@ import org.xml.sax.SAXException;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     2005-02-12
- * Revision ID: $Id: MainWindow.java 10 2005-03-04 18:45:41Z awickner $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -66,7 +66,8 @@ public class MainWindow
   private final String       fileSuffix  = "ose";
   private JFrame             frame;
   private JLabel             configInfo;
-  private ObjectPanel        topicPanel, personPanel, rolePanel;
+  private ObjectPanel        topicPanel, personPanel, rolePanel, 
+  													 locationPanel, timePanel;
   private SolutionPanel      solutionPanel;
   private JFileChooser       fileChooser;
   private GlobalNewWindow    globalNewWindow;
@@ -272,7 +273,7 @@ public class MainWindow
     rootPanel.add(objectPanel, rc);
 
     // Set up the topic panel
-    topicPanel = new ObjectPanel("Topics", new EditTopicWindow(frame), solver, this);
+    topicPanel = new ObjectPanel("Topics", new GenericEditWindow(frame, "Edit Topic"), solver, this);
     objectPanel.add(topicPanel);
     objectPanel.add(Box.createRigidArea(new Dimension(10, 0)));
     
@@ -285,8 +286,16 @@ public class MainWindow
     rolePanel = new ObjectPanel("Roles", new EditRoleWindow(frame), solver, this);
     objectPanel.add(rolePanel);
 
+    // Set up the location panel
+    locationPanel = new ObjectPanel("Locations", new GenericEditWindow(frame, "Edit Location"), solver, this);
+    objectPanel.add(locationPanel);
+
+    // Set up the time panel
+    timePanel = new ObjectPanel("Times", new GenericEditWindow(frame, "Edit Time"), solver, this);
+    objectPanel.add(timePanel);
+
     // Set up the solution panel
-    solutionPanel = new SolutionPanel(frame, solver, this);
+    solutionPanel = new SolutionPanel(frame, solver, this, this);
     rc.weighty = 0.0;
     rootPanel.add(solutionPanel, rc);
     
@@ -295,6 +304,8 @@ public class MainWindow
     personPanel.addNameChangeListener(listener);
     topicPanel.addNameChangeListener(listener);
     rolePanel.addNameChangeListener(listener);
+    locationPanel.addNameChangeListener(listener);
+    timePanel.addNameChangeListener(listener);
   }
   
   /**
@@ -356,14 +367,14 @@ public class MainWindow
       getHelpWindow().setVisible(true);
     else if (command.equals("about"))
     {
-      String date     = getSubversionString("$LastChangedDate: 2005-03-04 18:45:41Z $");
-      String revision = getSubversionString("$LastChangedRevision: 10 $");
+      String date     = getSubversionString("$LastChangedDate$");
+      String revision = getSubversionString("$LastChangedRevision$");
       
       JOptionPane.showMessageDialog(frame,
                                     programName + "\n\n"	
                                     + "Version: 0.5 revision " + revision + "\n" 
                                     + "Created: " + date + "\n" 
-                                    + "Algorithms: Gero Scholz\n"
+                                    + "Algorithms: Gero Scholz, Andreas Wickner\n"
                                     + "User Interface: Andreas Wickner");
     }
   }
@@ -395,6 +406,8 @@ public class MainWindow
     topicPanel.hideEditor();
     personPanel.hideEditor();
     rolePanel.hideEditor();
+    locationPanel.hideEditor();
+    timePanel.hideEditor();
     solutionPanel.hideEditor();
     
     solver = new Solver(topicNumber, personNumber, roleNumber, sessionNumber);
@@ -403,6 +416,8 @@ public class MainWindow
     topicPanel.reconfigure(solver, solver.getTopics().getNames());
     personPanel.reconfigure(solver, solver.getPersons().getNames());
     rolePanel.reconfigure(solver, solver.getRoles().getNames());
+    locationPanel.reconfigure(solver, solver.getLocations().getNames());
+    timePanel.reconfigure(solver, solver.getTimes().getNames());
     solutionPanel.reconfigure(solver, solver.getSolutionNames());
 
     configInfo.setText("Configured for " + topicNumber + " topics, "
@@ -460,13 +475,12 @@ public class MainWindow
       if (currentFile == null)
         currentFile = new File(fileChooser.getCurrentDirectory(), "untitled." + fileSuffix);
       
-      System.out.println("Saving as: " + currentFile.getAbsolutePath());
+      // System.out.println("Saving as: " + currentFile.getAbsolutePath());
       frame.setTitle(programName + " - " + currentFile.getAbsolutePath());
       
       FileWriter writer = new FileWriter(currentFile);
       PrintWriter stream = new PrintWriter(writer);
       
-      stream.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       save(stream, 0);
       stream.close();
       clearChanges();
@@ -484,6 +498,7 @@ public class MainWindow
    */
   public void save(PrintWriter stream, int level)
   {
+    stream.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
     stream.println("<openconclave topics=\"" + solver.getTopics().getNumber()
                    + "\" persons=\"" + solver.getPersons().getNumber()
                    + "\" roles=\"" + solver.getRoles().getNumber()
@@ -493,6 +508,8 @@ public class MainWindow
     solver.getTopics().save(stream, level+1);
     solver.getPersons().save(stream, level+1);
     solver.getRoles().save(stream, level+1);
+    solver.getLocations().save(stream, level+1);
+    solver.getTimes().save(stream, level+1);
 
     Indenter.println(stream, level+1, "<solutionParameters topicClusters=\""
                      + solutionPanel.getTopicClusters() + "\" personAssignments=\""
@@ -500,6 +517,9 @@ public class MainWindow
                      + solutionPanel.getAttempts() + "\" keepBest=\""
                      + solutionPanel.getKeepBest() + "\"/>");
     
+    Indenter.println(stream, level+1, "<selectedSolution index=\""
+                     + solutionPanel.getList().getSelectedIndex() + "\"/>");
+                     		
     Indenter.println(stream, level+1, "<solutions>");
     
     Vector solutions = solver.getSolutions();

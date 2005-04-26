@@ -2,7 +2,7 @@
  * Copyright 2005 Gero Scholz, Andreas Wickner
  * 
  * Created:     2005-02-11 
- * Revision ID: $Id: Solver.java 10 2005-03-04 18:45:41Z awickner $
+ * Revision ID: $Id$
  * 
  * 2005-02-14/AW: Changes to decrease excessive memory allocation/deallocation
  * 2005-02-22/GS: Algorithm bug fixes
@@ -58,6 +58,8 @@ extends TaskMonitor
   private Topics           topics;
   private Persons          persons;
   private Roles            roles;
+  private Locations        locations;
+  private Times            times;
   private Vector           solutions;
   private DefaultListModel solutionNames;
   private int              dimTryTopicClustering;
@@ -72,6 +74,7 @@ extends TaskMonitor
   private int              seqPersons[][];
   private NumberFormat     compactFormat;
   private boolean          solved;
+  private int              candidates[];
   
   /*
    * currently there is a tendency to find an ideal solution for some persons
@@ -94,8 +97,11 @@ extends TaskMonitor
     topics        = new Topics(this, dimTopics);
     persons       = new Persons(this, dimPersons, dimTopics);
     roles         = new Roles(dimRoles, dimPersons, dimSessions);
+    locations     = new Locations(dimSessions);
+    times         = new Times(dimPersons / dimSessions);
     solutions     = new Vector();
     solutionNames = new DefaultListModel();
+    candidates    = new int[dimPersons];
   }
 
   /**
@@ -147,6 +153,26 @@ extends TaskMonitor
   public Roles getRoles()
   {
     return roles;
+  }
+  
+  /**
+   * Return the number of locations.
+   * 
+   * @return the number of locations.
+   */
+  public Locations getLocations()
+  {
+    return locations;
+  }
+  
+  /**
+   * Return the number of times.
+   * 
+   * @return the number of times.
+   */
+  public Times getTimes()
+  {
+    return times;
   }
   
   /**
@@ -357,8 +383,8 @@ extends TaskMonitor
     
     // Prepare a number formatter
     compactFormat = NumberFormat.getInstance();
-    compactFormat.setMinimumFractionDigits(2);
-    compactFormat.setMaximumFractionDigits(2);
+    compactFormat.setMinimumFractionDigits(3);
+    compactFormat.setMaximumFractionDigits(3);
     
     if (debug)
     {
@@ -724,20 +750,21 @@ extends TaskMonitor
     if (debug)
     	System.out.println("For each session, there are " + rolePool.size() + " roles in the pool of optional roles.");
     
-    // First, we go through each session and assign the roles with a minimum occurence
-    for (int t=0;  t < topics.getNumber();  ++t)
-      for (int r=0;  r < roles.getNumber();  ++r)
-        for (int n=0;  n < roles.getMinimumPerSession(r);  ++n)
-          solution.setRole(chooseMostInterestedPerson(t), t, r+1);
-
-    if (debug)
-    	System.out.println("\nAfter assigning the required roles:\n" + solution.debugString());
+    // Prepare the vector which tells us how many copies of each
+    // role should be assigned in a session
+    int rolesToAssign[] = new int[dimRoles];
     
-    // Now, we distribute the optional roles for each session
+    // We iterate over all sessions to assign the roles
     for (int t=0;  t < topics.getNumber();  ++t)
     {
-      // Make a copy of the complete rolePool
-      Vector pool = (Vector) rolePool.clone();
+      int minimumRoles = 0;
+      
+      // Initialise the role array with the minimum numbers.
+      for (int r=0;  r < dimRoles;  ++r)
+      {
+        rolesToAssign[r] = roles.getMinimumPerSession(r);
+        minimumRoles += rolesToAssign[r];
+      }
       
       // Count the unassigned persons in this session
       // (this is done to enable this algorithm to cope with a varying 
@@ -747,25 +774,33 @@ extends TaskMonitor
       for (int p=0;  p < persons.getNumber();  ++p)
         if (solution.getRole(p, t) == unassignedRole)
           ++unassigned;
-        
-      // Randomly remove roles from the pool until we have the right number
-      while (pool.size() > unassigned)
-      {
-        int index = rand.nextInt(pool.size());
-        pool.remove(index);
-      }
-
-      if (pool.size() != unassigned)
-        System.out.println("CANNOT HAPPEN: pool size wrong.");
+    
+      int optionalRoles = unassigned - minimumRoles;
       
-      // Assign the remaining roles in the pool
-      while (pool.size() > 0)  
+      if (debug)
+      	System.out.println("For session " + t + " there are " + optionalRoles + 
+      	                   " optional roles to pick.");
+      
+      // Pick the optional roles randomly and increase rolesToAssign accordingly
+      // First, make a copy of the complete rolePool
+      Vector pool = (Vector) rolePool.clone();
+      
+      if (optionalRoles > pool.size())
+        System.out.println("CANNOT HAPPEN: pool size wrong.");
+
+      for (int n=0;  n < optionalRoles;  ++n)  
       {
         int index = rand.nextInt(pool.size());
         int r     = ((Integer)pool.elementAt(index)).intValue();
         pool.remove(index);
-        solution.setRole(chooseMostInterestedPerson(t), t, r+1);
+        ++rolesToAssign[r];
       }
+
+      // Now we know what roles must be assigned.
+      // Do it by picking the participants that are most interested.
+      for (int r=0;  r < dimRoles;  ++r)
+        for (int n=0;  n < rolesToAssign[r];  ++n)
+          solution.setRole(chooseMostInterestedPerson(t, rand), t, r+1);
     }
     
     if (debug)
@@ -783,27 +818,34 @@ extends TaskMonitor
    * @param t the topic of the session.
    * @return the most interested unassigned pearticipant.
    */
-  protected int chooseMostInterestedPerson(int t)
+  protected int chooseMostInterestedPerson(int t, Random rand)
   {
     // Of all the unassigned persons in this session,
     // pick the one with the highest interest.
     int dimRoles       = getRoles().getNumber();
     int unassignedRole = dimRoles + 1; // Marker for an unassigned role
-    int bestPerson = -1;
     int interest = 99999;
+    int dimCandidates = 0;
     
     for (int p=0;  p < persons.getNumber();  ++p)
       if (solution.getRole(p, t) == unassignedRole)
-        if (persons.getPreferenceIndex(p, t) < interest)
-        {
-        	bestPerson = p;
-        	interest   = persons.getPreferenceIndex(p, t);
-        }
+      {
+        int pInterest = persons.getPreferenceIndex(p, t);
         
-    if (bestPerson < 0)
+        if (pInterest < interest)
+        {
+          dimCandidates = 0;
+          candidates[dimCandidates++] = p;
+        	interest   = pInterest;
+        }
+        else if (pInterest == interest)
+          candidates[dimCandidates++] = p;
+      }
+      
+    if (dimCandidates <= 0)
       System.out.println("CANNOT HAPPEN: no person left to choose.");
         
-    return bestPerson;
+    return candidates[rand.nextInt(dimCandidates)];
   }
 
   /**

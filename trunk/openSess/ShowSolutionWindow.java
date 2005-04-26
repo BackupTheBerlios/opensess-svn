@@ -18,7 +18,7 @@ import javax.swing.JTabbedPane;
  * Copyright 2005 Andreas Wickner
  * 
  * Created:     19.02.2005
- * Revision ID: $Id: ShowSolutionWindow.java 10 2005-03-04 18:45:41Z awickner $
+ * Revision ID: $Id$
  * 
  * This file is part of OpenSess.
  * OpenSess is free software; you can redistribute it and/or modify it 
@@ -143,8 +143,11 @@ public class ShowSolutionWindow
     this.solver = solver;
     this.selected = selected;
     
-    Topics topics = solver.getTopics();
-    Persons persons = solver.getPersons();
+    Topics    topics    = solver.getTopics();
+    Persons   persons   = solver.getPersons();
+    Locations locations = solver.getLocations();
+    Times     times     = solver.getTimes();
+    
     int tNumber = topics.getNumber();   // Number of topics
     int pNumber = persons.getNumber();  // Number of persons
     int sNumber = solver.getSessionNumber();   // Number of sessions
@@ -182,12 +185,12 @@ public class ShowSolutionWindow
         if (g == 0)  // Column headers
         {
           if (s > 0)
-            label.setText("Session " + s);
+            label.setText(locations.getName(s-1));
         }
         else if (s == 0)  // Row headers
         {
           if (g > 0)
-            label.setText("Group " + g);
+            label.setText(times.getName(g-1));
         }
       }
      
@@ -324,7 +327,7 @@ public class ShowSolutionWindow
     
     public void nameChanged(int index, String oldName, String newName)
     {
-      System.out.println("Solution update on name change " + oldName + " -> " + newName);
+      // System.out.println("Solution update on name change " + oldName + " -> " + newName);
       window.update();
     }
   }
